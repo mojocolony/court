@@ -4,7 +4,7 @@ A quiet personal dashboard for following professional tennis.
 
 ## Status
 
-v0.2.4 connects Today to Court's Supabase `court-tennis` broker. The UI consumes only Court's normalized provider-neutral response, defaults to singles, keeps ATP/WTA prominent, places Challenger below the main tour, and collapses ITF/other events under More Matches. Missing live-score data is treated as optional.
+v0.2.8 refines the first Match page: tournament and round context are clearer, competitors are more prominent, Star/Watch are quiet Court-style actions, and Note stays collapsed until requested. Today retains ATP/WTA and Singles/Doubles filtering.
 
 ## Configuration
 
@@ -27,3 +27,7 @@ npm run build
 
 ## v0.2.4
 Today now uses ATP/WTA singles fixtures for the local calendar date, merged with live main-tour singles. Challenger, ITF and juniors remain excluded from Today.
+
+
+## v0.2.8
+Refined Match page hierarchy and interaction. Notes remain device-local and autosave after opening the Note action.
