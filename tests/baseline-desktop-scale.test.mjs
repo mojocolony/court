@@ -16,10 +16,10 @@ test('desktop Baseline uses the approved wider editorial canvas', () => {
 
 test('desktop navigation and schedule typography are readable at full scale', () => {
   expect(rule('.wordmark')).toContain('font-size: 16px');
-  expect(rule('.top-nav')).toContain('font-size: 16px');
+  expect(rule('.top-nav')).toContain('font-size: 17px');
   expect(rule('.players')).toContain('font-size: 22px');
   expect(rule('.match-time')).toContain('font-size: 15px');
-  expect(rule('.match-round')).toContain('font-size: 15px');
+  expect(rule('.match-round')).toContain('font-size: 16px');
 });
 
 test('text size control is rendered as a restrained control', () => {
@@ -29,11 +29,11 @@ test('text size control is rendered as a restrained control', () => {
 
 
 test('desktop base labels are no longer microtype', () => {
-  expect(rule('.segmented button')).toContain('font-size: 15px');
-  expect(rule('.eyebrow,\n.round-label')).toContain('font-size: 12px');
-  expect(rule('.schedule-head')).toContain('font-size: 10px');
+  expect(rule('.segmented button')).toContain('font-size: 16px');
+  expect(rule('.eyebrow,\n.round-label')).toContain('font-size: 13px');
+  expect(rule('.schedule-head')).toContain('font-size: 11px');
   expect(rule('.date-rail button span')).toContain('font-size: 12px');
-  expect(rule('.feed-status')).toContain('font-size: 11px');
+  expect(rule('.feed-status')).toContain('font-size: 12px');
 });
 
 test('desktop competitors use the horizontal match column', () => {
