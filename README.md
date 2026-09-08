@@ -4,13 +4,15 @@ A quiet personal dashboard for following professional tennis.
 
 ## Status
 
-v0.5.1 refines the first Baseline design build with larger desktop base typography and a better-balanced two-column competitor layout. It renames the user-facing product from Court, introduces the approved editorial typography and responsive layout, and redesigns Today as an order-of-play view with a compact date rail, ATP/WTA and Singles/Doubles filters, tournament sections, and wide schedule rows on larger screens.
+v0.6.0 is the first functional build on top of the Baseline editorial design. Today keeps the ATP/WTA and Singles/Doubles order-of-play view, now with personal relevance ordering and spoiler-safe score hiding for matches placed in Watch.
 
-The Match page and its Star, Watch, and Note behavior remain intact. Personal match state is still device-local in this build.
+Players now supports live ATP/WTA player search, followed players, player profiles, and upcoming-match context where the free provider has it. Tour entries open tournament detail pages and tournaments can be followed. Watch now contains working Up Next, Watch Later, and Watched sections with match snapshots and notes.
+
+Star, Watch, Note, followed-player, and followed-tournament data are stored locally immediately. When Baseline can reuse an authenticated Supabase session for the shared Ticking project on the same browser origin, those personal records also sync to Court-prefixed RLS-protected Supabase tables. This preserves the existing internal Court naming while the visible product remains Baseline.
 
 ## Internal naming
 
-The existing GitHub repository path, `/court/` deployment base, Supabase Edge Function (`court-tennis`), `COURT_*` environment names, and internal Court TypeScript types remain unchanged for now. This avoids unnecessary deployment and backend migration risk while the visible product becomes Baseline.
+The existing GitHub repository path, `/court/` deployment base, Supabase Edge Function (`court-tennis`), `COURT_*` environment names, and internal Court TypeScript types remain unchanged for now. This avoids unnecessary deployment and backend migration risk while the visible product is Baseline.
 
 ## Configuration
 

@@ -1,12 +1,12 @@
 {
   "name": "baseline",
   "private": true,
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "test": "node tests/baseline-secondary-design.node.mjs && vitest run",
+    "test": "node tests/baseline-secondary-design.node.mjs && node tests/baseline-functional.node.mjs && vitest run",
     "preview": "vite preview"
   },
   "dependencies": {

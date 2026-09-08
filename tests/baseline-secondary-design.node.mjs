@@ -7,9 +7,9 @@ const css = await readFile(new URL('../src/styles/layout.css', import.meta.url),
 assert.match(app, /class="tour-timeline"/, 'Tour should render the editorial season timeline');
 assert.match(app, /class="players-search"/, 'Players should render the search/following layout');
 assert.match(app, /class="watch-sections"/, 'Watch should render the notebook sections');
-assert.match(app, />Up Next</, 'Watch should expose Up Next');
-assert.match(app, />Watch Later</, 'Watch should expose Watch Later');
-assert.match(app, />Watched</, 'Watch should expose Watched');
+assert.match(app, /"Up Next"/, 'Watch should expose Up Next');
+assert.match(app, /"Watch Later"/, 'Watch should expose Watch Later');
+assert.match(app, /"Watched"/, 'Watch should expose Watched');
 
 assert.match(css, /\.secondary-hero\s*\{/, 'Secondary pages should use a shared editorial hero');
 assert.match(css, /\.tour-timeline\s*\{/, 'Tour timeline needs layout styling');
