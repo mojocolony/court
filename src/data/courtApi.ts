@@ -23,16 +23,29 @@ function config() {
   return { url, key };
 }
 
-function localDateParam(date = new Date()): string {
-  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
-  const value = Object.fromEntries(parts.map(part => [part.type, part.value]));
-  return `${value.year}-${value.month}-${value.day}`;
+export function utcRangeForOffsetDate(
+  year: number, month: number, day: number, offsetMinutes: number
+): { from: string; to: string } {
+  const fromMs = Date.UTC(year, month, day, 0, 0, 0, 0) + offsetMinutes * 60_000;
+  return {
+    from: new Date(fromMs).toISOString(),
+    to: new Date(fromMs + 86_400_000 - 1).toISOString()
+  };
+}
+
+export function localDayUtcRange(date = new Date()): { from: string; to: string } {
+  const midnight = new Date(date);
+  midnight.setHours(0, 0, 0, 0);
+  return utcRangeForOffsetDate(
+    midnight.getFullYear(), midnight.getMonth(), midnight.getDate(), midnight.getTimezoneOffset()
+  );
 }
 
 export async function getTodayFeed(signal?: AbortSignal): Promise<TodayFeed> {
   const { url, key } = config();
-  const date = localDateParam();
-  const response = await fetch(`${url}/functions/v1/court-tennis?route=today&date=${encodeURIComponent(date)}`, {
+  const { from, to } = localDayUtcRange();
+  const params = new URLSearchParams({ route: "today", from, to });
+  const response = await fetch(`${url}/functions/v1/court-tennis?${params.toString()}`, {
     headers: {
       apikey: key,
       Authorization: `Bearer ${key}`,

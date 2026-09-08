@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CourtMatch } from "../src/data/courtApi";
+import { utcRangeForOffsetDate } from "../src/data/courtApi";
 
 function sample(overrides: Partial<CourtMatch> = {}): CourtMatch {
   return {
@@ -31,5 +32,13 @@ describe("Today fixture contract", () => {
     expect(match.tournamentName).toBe("US Open");
     expect(match.status).toBe("scheduled");
     expect(match.sets).toEqual([]);
+  });
+});
+
+describe("Today local-day boundaries", () => {
+  it("sends the user's complete local day as UTC instants", () => {
+    const range = utcRangeForOffsetDate(2026, 8, 8, 240);
+    expect(range.from).toBe("2026-09-08T04:00:00.000Z");
+    expect(range.to).toBe("2026-09-09T03:59:59.999Z");
   });
 });
