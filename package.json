@@ -1,12 +1,12 @@
 {
   "name": "baseline",
   "private": true,
-  "version": "0.7.1",
+  "version": "0.7.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "test": "node tests/baseline-secondary-design.node.mjs && node tests/baseline-functional.node.mjs && node --experimental-strip-types --test tests/app/presentation.node.ts tests/app/functional-core.node.ts tests/domain/recentMatches.node.ts && vitest run",
+    "test": "node tests/app/player-search-behavior.node.mjs && node tests/baseline-secondary-design.node.mjs && node tests/baseline-functional.node.mjs && node --experimental-strip-types --test tests/app/presentation.node.ts tests/app/functional-core.node.ts tests/domain/recentMatches.node.ts && vitest run",
     "preview": "vite preview"
   },
   "dependencies": {

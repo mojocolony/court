@@ -50,6 +50,57 @@ export interface CourtTournament {
   upcoming?: CourtMatch[];
 }
 
+const PLAYER_SEARCH_CACHE_KEY = "baseline.player-search-cache.v1";
+const PLAYER_SEARCH_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+type PlayerSearchCacheEntry = { savedAt: number; players: CourtPlayer[] };
+const playerSearchMemory = new Map<string, PlayerSearchCacheEntry>();
+
+function normalizedPlayerSearch(search:string) {
+  return search.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function loadPlayerSearchStorage() {
+  if (typeof localStorage === "undefined") return;
+  try {
+    const raw = localStorage.getItem(PLAYER_SEARCH_CACHE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as Record<string, PlayerSearchCacheEntry>;
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value && typeof value.savedAt === "number" && Array.isArray(value.players)) playerSearchMemory.set(key, value);
+    }
+  } catch { /* cache is disposable */ }
+}
+
+function savePlayerSearchStorage() {
+  if (typeof localStorage === "undefined") return;
+  try {
+    const entries = [...playerSearchMemory.entries()]
+      .filter(([, value]) => Date.now() - value.savedAt < PLAYER_SEARCH_CACHE_TTL_MS)
+      .slice(-40);
+    localStorage.setItem(PLAYER_SEARCH_CACHE_KEY, JSON.stringify(Object.fromEntries(entries)));
+  } catch { /* cache is disposable */ }
+}
+
+loadPlayerSearchStorage();
+
+export function findCachedPlayerSearch(search:string):CourtPlayer[] | undefined {
+  const query = normalizedPlayerSearch(search);
+  const now = Date.now();
+  const candidates = [...playerSearchMemory.entries()]
+    .filter(([key, entry]) => query.startsWith(key) && now - entry.savedAt < PLAYER_SEARCH_CACHE_TTL_MS)
+    .sort((a, b) => b[0].length - a[0].length);
+  if (!candidates.length) return undefined;
+  const [, entry] = candidates[0];
+  return entry.players.filter(player => player.name.toLowerCase().includes(query));
+}
+
+export function writeCachedPlayerSearch(search:string, players:CourtPlayer[]) {
+  const query = normalizedPlayerSearch(search);
+  if (query.length < 3) return;
+  playerSearchMemory.set(query, { savedAt: Date.now(), players });
+  savePlayerSearchStorage();
+}
+
 function config() {
   const url = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -65,9 +116,12 @@ async function edgeGet<T>(params:URLSearchParams, signal?:AbortSignal):Promise<T
   });
   if (!response.ok) {
     const retry = response.headers.get("Retry-After");
-    throw new Error(response.status === 429 && retry
-      ? `Tennis data limit reached. Try again in ${retry} seconds.`
-      : `Tennis data unavailable (${response.status}).`);
+    if (response.status === 429) {
+      throw new Error(retry
+        ? `Tennis data limit reached on the free provider. Try again in ${retry} seconds.`
+        : "Tennis data limit reached on the free provider. Try again after the provider quota resets.");
+    }
+    throw new Error(`Tennis data unavailable (${response.status}).`);
   }
   return response.json() as Promise<T>;
 }
@@ -110,8 +164,12 @@ export async function getMatch(id: string, signal?: AbortSignal): Promise<CourtM
 }
 
 export async function searchPlayers(search:string, signal?:AbortSignal):Promise<CourtPlayer[]> {
-  if(search.trim().length<2) return [];
-  const body=await edgeGet<{players:CourtPlayer[]}>(new URLSearchParams({route:"players",search:search.trim()}), signal);
+  const query = search.trim().replace(/\s+/g, " ");
+  if(query.length<3) return [];
+  const cached = findCachedPlayerSearch(query);
+  if (cached !== undefined) return cached;
+  const body=await edgeGet<{players:CourtPlayer[]}>(new URLSearchParams({route:"players",search:query}), signal);
+  writeCachedPlayerSearch(query, body.players);
   return body.players;
 }
 

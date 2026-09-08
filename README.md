@@ -4,7 +4,7 @@ A quiet personal dashboard for following professional tennis.
 
 ## Status
 
-v0.7.1 improves completed-match clarity and player context. Finished matches now show a named result plus full set-by-set scores when available, or a plain-language sets-won summary when the provider only supplies aggregate set counts. Baseline also retains completed matches it has directly observed so player pages can show a recent last-match context without requiring paid historical data.
+v0.7.2 fixes Players search focus and rate-limit behaviour. Typing no longer rerenders the whole Players page, searches wait for three characters with a longer debounce, successful searches are cached locally for six hours, and 429 responses now explain that the free tennis-data quota has been reached instead of showing a generic error.
 
 Players supports live ATP/WTA search, followed players, player profiles, and upcoming-match context where the free provider has it. Tour now loads a multi-day ATP/WTA slate into the season timeline, and tournament detail pages show live and upcoming matches when available. Watch contains working Up Next, Watch Later, and Watched sections, refreshes stale match snapshots near start time, and includes an optional global Spoiler Mode.
 

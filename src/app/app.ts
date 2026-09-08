@@ -284,6 +284,21 @@ function playerSearchRow(player: CourtPlayer) {
   </div>`;
 }
 
+function playerSearchResultsMarkup() {
+  if (playerSearchQuery.trim().length < 3) return "";
+  return playerSearchResults.length
+    ? playerSearchResults.map(playerSearchRow).join("")
+    : `<p class="editorial-empty search-empty">No matching ATP or WTA players.</p>`;
+}
+
+function updatePlayerSearchResults(root:HTMLElement, message?:string) {
+  const results = root.querySelector<HTMLElement>(".player-search-results");
+  if (!results) return;
+  results.innerHTML = message
+    ? `<p class="editorial-empty search-empty">${escapeHtml(message)}</p>`
+    : playerSearchResultsMarkup();
+}
+
 function playersView() {
   const following = listFollowedPlayers();
   return `${secondaryHero("Players", "Reference", "Following first")}
@@ -296,9 +311,7 @@ function playersView() {
         <div class="section-heading"><h2>Find a player</h2><span>ATP · WTA</span></div>
         <label class="search-label" for="player-search">Search players</label>
         <input id="player-search" class="player-search-field" type="search" placeholder="Name" autocomplete="off" value="${escapeHtml(playerSearchQuery)}">
-        <div class="player-search-results" aria-live="polite">${playerSearchQuery.length >= 2
-          ? playerSearchResults.length ? playerSearchResults.map(playerSearchRow).join("") : `<p class="editorial-empty search-empty">No matching ATP or WTA players.</p>`
-          : ""}</div>
+        <div class="player-search-results" aria-live="polite">${playerSearchResultsMarkup()}</div>
       </section>
     </main>`;
 }
@@ -563,37 +576,7 @@ function wireMatch(root: HTMLElement, match: CourtMatch) {
   };
 }
 
-function wirePlayers(root:HTMLElement) {
-  const search = root.querySelector<HTMLInputElement>("#player-search");
-  if (search) {
-    let timer:number|undefined;
-    search.oninput=()=>{
-      playerSearchQuery=search.value;
-      clearTimeout(timer);
-      playerSearchRequest?.abort();
-      if(playerSearchQuery.trim().length<2) {
-        playerSearchResults=[];
-        renderRoot(root,shell("players",playersView()));
-        wirePlayers(root);
-        return;
-      }
-      timer=window.setTimeout(()=>{
-        playerSearchRequest=new AbortController();
-        searchPlayers(playerSearchQuery,playerSearchRequest.signal).then(results=>{
-          if(parseRoute(location.hash).name!=="players") return;
-          playerSearchResults=dedupePlayers(results);
-          renderRoot(root,shell("players",playersView()));
-          wirePlayers(root);
-          requestAnimationFrame(()=>root.querySelector<HTMLInputElement>("#player-search")?.focus());
-        }).catch(error=>{
-          if(error instanceof DOMException && error.name==="AbortError") return;
-          const results=root.querySelector<HTMLElement>(".player-search-results");
-          if(results) results.innerHTML=`<p class="editorial-empty search-empty">${escapeHtml(error instanceof Error?error.message:"Player search is unavailable.")}</p>`;
-        });
-      },300);
-    };
-  }
-
+function wirePlayerResultActions(root:HTMLElement) {
   root.querySelectorAll<HTMLButtonElement>("[data-follow-player]").forEach(button=>{
     button.onclick=()=>{
       const player=playerSearchResults.find(item=>item.id===button.dataset.followPlayer);
@@ -606,6 +589,40 @@ function wirePlayers(root:HTMLElement) {
       wirePlayers(root);
     };
   });
+}
+
+function wirePlayers(root:HTMLElement) {
+  const search = root.querySelector<HTMLInputElement>("#player-search");
+  if (search) {
+    let timer:number|undefined;
+    search.oninput=()=>{
+      playerSearchQuery=search.value;
+      clearTimeout(timer);
+      playerSearchRequest?.abort();
+      if(playerSearchQuery.trim().length<3) {
+        playerSearchResults=[];
+        updatePlayerSearchResults(root);
+        return;
+      }
+      updatePlayerSearchResults(root, "Searching…");
+      timer=window.setTimeout(()=>{
+        const query=playerSearchQuery.trim();
+        playerSearchRequest=new AbortController();
+        searchPlayers(query,playerSearchRequest.signal).then(results=>{
+          if(parseRoute(location.hash).name!=="players" || playerSearchQuery.trim()!==query) return;
+          playerSearchResults=dedupePlayers(results);
+          updatePlayerSearchResults(root);
+          wirePlayerResultActions(root);
+        }).catch(error=>{
+          if(error instanceof DOMException && error.name==="AbortError") return;
+          if(playerSearchQuery.trim()!==query) return;
+          updatePlayerSearchResults(root,error instanceof Error?error.message:"Player search is unavailable.");
+        });
+      },700);
+    };
+  }
+
+  wirePlayerResultActions(root);
 
   root.querySelectorAll<HTMLButtonElement>("[data-unfollow-player]").forEach(button=>{
     button.onclick=()=>{
