@@ -10,7 +10,8 @@ test('completed match uses FINAL, full set scores, and winner identity', () => {
     sets:[{home:6,away:2},{home:3,away:6},{home:6,away:4}], setCounts:[2,1], games:[[6,3,6],[2,6,4]]
   } as any;
   assert.deepEqual(completedMatchPresentation(match), {
-    statusLabel:'FINAL', scoreLabel:'6–2  3–6  6–4', winnerPlayerId:'sab'
+    statusLabel:'FINAL', scoreLabel:'6–2  3–6  6–4', winnerPlayerId:'sab',
+    resultLabel:'Aryna Sabalenka def. Linda Noskova'
   });
 });
 
@@ -30,4 +31,18 @@ test('player search deduplicates same player and keeps richer record', () => {
   assert.equal(result.length, 2);
   assert.equal(result[0].id, '2');
   assert.equal(result[0].ranking, 1);
+});
+
+test('completed aggregate score becomes a clear result instead of a bare set count', () => {
+  const match = {
+    id:'m2', status:'completed',
+    home:{id:'tia',name:'Frances Tiafoe'}, away:{id:'mic',name:'Alex Michelsen'},
+    sets:[], setCounts:[1,3], games:[]
+  } as any;
+  assert.deepEqual(completedMatchPresentation(match), {
+    statusLabel:'FINAL',
+    scoreLabel:'Alex Michelsen won 3 sets to 1',
+    winnerPlayerId:'mic',
+    resultLabel:'Alex Michelsen def. Frances Tiafoe'
+  });
 });

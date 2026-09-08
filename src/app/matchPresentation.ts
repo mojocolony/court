@@ -62,10 +62,45 @@ export function inferredWinnerPlayerId(match: Pick<CourtMatch, "status" | "event
   return undefined;
 }
 
+function detailedSetScoreLabel(match: Pick<CourtMatch, "sets" | "games">) {
+  const games = match.games;
+  if (Array.isArray(games) && games.length >= 2 && Array.isArray(games[0]) && Array.isArray(games[1])) {
+    const labels:string[] = [];
+    const length = Math.min(games[0].length, games[1].length);
+    for (let index=0; index<length; index++) {
+      const home=games[0][index], away=games[1][index];
+      if (isNumber(home) && isNumber(away)) labels.push(`${home}–${away}`);
+    }
+    if (labels.length) return labels.join("  ");
+  }
+  if (!Array.isArray(match.sets)) return "";
+  return (match.sets as unknown[]).map(set => {
+    if (Array.isArray(set) && set.length >= 2 && isNumber(set[0]) && isNumber(set[1])) return `${set[0]}–${set[1]}`;
+    if (set && typeof set === "object") {
+      const typed=set as {home?:unknown;away?:unknown};
+      if (isNumber(typed.home) && isNumber(typed.away)) return `${typed.home}–${typed.away}`;
+    }
+    return "";
+  }).filter(Boolean).join("  ");
+}
+
 export function completedMatchPresentation(match: CourtMatch) {
+  const completed = matchIsCompleted(match);
+  const winnerPlayerId = inferredWinnerPlayerId(match);
+  const winner = winnerPlayerId === match.home.id ? match.home : winnerPlayerId === match.away.id ? match.away : undefined;
+  const loser = winnerPlayerId === match.home.id ? match.away : winnerPlayerId === match.away.id ? match.home : undefined;
+  const resultLabel = completed && winner && loser ? `${winner.name} def. ${loser.name}` : "";
+  let scoreLabel = detailedSetScoreLabel(match);
+  if (!scoreLabel && completed && winner && Array.isArray(match.setCounts) && match.setCounts.length >= 2 && isNumber(match.setCounts[0]) && isNumber(match.setCounts[1])) {
+    const winnerSets = winnerPlayerId === match.home.id ? match.setCounts[0] : match.setCounts[1];
+    const loserSets = winnerPlayerId === match.home.id ? match.setCounts[1] : match.setCounts[0];
+    scoreLabel = `${winner.name} won ${winnerSets} ${winnerSets === 1 ? "set" : "sets"} to ${loserSets}`;
+  }
+  if (!scoreLabel) scoreLabel = setScoreLabel(match);
   return {
-    statusLabel: matchIsCompleted(match) ? "FINAL" : match.status === "live" ? "LIVE" : "",
-    scoreLabel: setScoreLabel(match),
-    winnerPlayerId: inferredWinnerPlayerId(match)
+    statusLabel: completed ? "FINAL" : match.status === "live" ? "LIVE" : "",
+    scoreLabel,
+    winnerPlayerId,
+    resultLabel
   };
 }

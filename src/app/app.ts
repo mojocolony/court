@@ -12,6 +12,7 @@ import { listMatchPersonalRecords, readMatchPersonalState, watchStateIsProtected
 import { followPlayer, followTournament, isPlayerFollowed, isTournamentFollowed, listFollowedPlayers, listFollowedTournaments, unfollowPlayer, unfollowTournament, type FollowedPlayer, type FollowedTournament } from "../domain/followedState";
 import { persistFollowedPlayer, persistFollowedTournament, persistMatchState, persistSettings } from "../data/personalData";
 import { readBaselineSettings, writeBaselineSettings } from "../domain/settings";
+import { recentCompletedMatchesForPlayer, rememberCompletedMatch } from "../domain/recentMatches";
 import { rankMatches } from "../domain/relevance";
 import type { PersonalState } from "../domain/types";
 import "../styles/tokens.css";
@@ -361,6 +362,28 @@ function playerAge(birthday?: string) {
   return age;
 }
 
+function relativeMatchDate(match:CourtMatch) {
+  const date=new Date(match.scheduledAt);
+  if(Number.isNaN(date.getTime())) return "";
+  const today=new Date();
+  const same=(a:Date,b:Date)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+  if(same(date,today)) return "Today";
+  const yesterday=new Date(today.getFullYear(),today.getMonth(),today.getDate()-1);
+  if(same(date,yesterday)) return "Yesterday";
+  return new Intl.DateTimeFormat("en-CA",{month:"short",day:"numeric"}).format(date);
+}
+
+function playerRecentContext(player:CourtPlayer) {
+  const match=recentCompletedMatchesForPlayer(player.id)[0];
+  if(!match) return "";
+  const state=readMatchPersonalState(match.id);
+  const hidden=(readBaselineSettings().globalSpoilerMode||watchStateIsProtected(state))&&!revealedMatchIds.has(match.id);
+  const presentation=completedMatchPresentation(match);
+  const headline=hidden ? `${match.home.name} vs ${match.away.name}` : presentation.resultLabel || `${match.home.name} vs ${match.away.name}`;
+  const detail=[match.tournamentName,matchHeading(match.round,match.roundCode),relativeMatchDate(match)].filter(Boolean).join(" · ");
+  return `<a class="player-next-match player-last-match" href="#/match/${encodeURIComponent(match.id)}"><span>Last match</span><strong>${escapeHtml(headline)}</strong><span>${escapeHtml(hidden ? `${detail} · Result hidden` : presentation.scoreLabel ? `${detail} · ${presentation.scoreLabel}` : detail)}</span></a>`;
+}
+
 function playerDetailView(player:CourtPlayer) {
   const followed=isPlayerFollowed(player.id);
   const age=playerAge(player.birthday);
@@ -377,7 +400,7 @@ function playerDetailView(player:CourtPlayer) {
     </header>
     <main class="player-profile-main">
       <div class="player-facts">${facts || `<span class="editorial-empty">Profile details are limited for this player.</span>`}</div>
-      <section class="player-profile-section"><div class="section-heading"><h2>Current context</h2></div>${player.nextMatch ? `<a class="player-next-match" href="#/match/${encodeURIComponent(player.nextMatch.id)}"><span>Next match</span><strong>${escapeHtml(player.nextMatch.home.name)} <i>vs</i> ${escapeHtml(player.nextMatch.away.name)}</strong><span>${escapeHtml(player.nextMatch.tournamentName)} · ${escapeHtml(matchHeading(player.nextMatch.round, player.nextMatch.roundCode))} · ${escapeHtml(timeLabel(player.nextMatch))}</span></a>` : `<p class="editorial-empty">Next match not yet available.</p>`}<p class="editorial-empty player-data-note">Recent completed-match form and deep historical records remain unavailable on the free data plan.</p></section>
+      <section class="player-profile-section"><div class="section-heading"><h2>Current context</h2></div>${playerRecentContext(player)}${player.nextMatch ? `<a class="player-next-match" href="#/match/${encodeURIComponent(player.nextMatch.id)}"><span>Next match</span><strong>${escapeHtml(player.nextMatch.home.name)} <i>vs</i> ${escapeHtml(player.nextMatch.away.name)}</strong><span>${escapeHtml(player.nextMatch.tournamentName)} · ${escapeHtml(matchHeading(player.nextMatch.round, player.nextMatch.roundCode))} · ${escapeHtml(timeLabel(player.nextMatch))}</span></a>` : `<p class="editorial-empty next-match-empty">Next match not yet available.</p>`}<p class="editorial-empty player-data-note">Baseline will build recent context from matches it has observed. Deeper historical records remain unavailable on the free data plan.</p></section>
     </main>`;
 }
 
@@ -439,7 +462,7 @@ function matchView(match: CourtMatch) {
         <div class="match-versus">vs</div>
         ${player(match.away)}
       </div>
-      ${protectedScore ? `<div class="protected-result"><span>${completed ? "Result hidden" : "Score hidden"}</span><button data-action="reveal">Reveal</button></div>` : score ? `<div class="match-score${completed ? " is-final" : ""}">${escapeHtml(score)}</div>` : ""}
+      ${protectedScore ? `<div class="protected-result"><span>${completed ? "Result hidden" : "Score hidden"}</span><button data-action="reveal">Reveal</button></div>` : `${completed && presentation.resultLabel ? `<div class="match-result-line">${escapeHtml(presentation.resultLabel)}</div>` : ""}${score ? `<div class="match-score${completed ? " is-final" : ""}">${escapeHtml(score)}</div>` : ""}`}
       <div class="personal-actions">
         <button data-action="star" class="${state.starred ? "active" : ""}" aria-pressed="${state.starred}"><span class="action-icon">${state.starred ? "★" : "☆"}</span><span>${state.starred ? "Starred" : "Star"}</span></button>
         <button data-action="watch" class="${state.watchState === "up_next" ? "active" : ""}" aria-pressed="${state.watchState === "up_next"}"><span class="action-icon">${state.watchState === "up_next" ? "●" : "○"}</span><span>${state.watchState === "up_next" ? "Watching" : state.watchState === "later" ? "Watch later" : state.watchState === "watched" ? "Watched" : "Watch"}</span></button>
@@ -454,6 +477,7 @@ function matchView(match: CourtMatch) {
 }
 
 function saveMatchState(match:CourtMatch, state:MatchPersonalState) {
+  rememberCompletedMatch(match);
   const withMatch:MatchPersonalState={ ...state, match };
   writeMatchPersonalState(match.id, withMatch);
   void persistMatchState(match.id, withMatch);
@@ -714,6 +738,7 @@ export function renderApp(root: HTMLElement) {
     request = new AbortController();
     getMatch(route.id, request.signal).then(match => {
       if (parseRoute(location.hash).name !== "match") return;
+      rememberCompletedMatch(match);
       renderRoot(root, shell("match", matchView(match)));
       wireMatch(root, match);
     }).catch(error => {

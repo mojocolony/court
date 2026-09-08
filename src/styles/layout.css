@@ -1000,3 +1000,15 @@ h2 {
   .watch-result { font-size: 11px; }
   .tournament-detail-schedule .schedule-head { display: none; }
 }
+
+/* Observed results */
+.match-result-line {
+  border-bottom: 1px solid var(--rule);
+  padding: 18px 0 6px;
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 500;
+}
+.match-result-line + .match-score { padding-top: 10px; }
+.player-last-match { margin-bottom: 12px; }
+.next-match-empty { margin: 14px 0 0; }
