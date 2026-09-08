@@ -44,6 +44,5 @@ describe("Today local-day boundaries", () => {
 });
 
 // Compile-time regression: provider round codes are part of Court match data.
-import type { CourtMatch } from "../src/data/courtApi";
 const _roundCodeContract: CourtMatch["roundCode"] = "R16";
 void _roundCodeContract;
