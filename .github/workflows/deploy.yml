@@ -17,6 +17,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+  VITE_SUPABASE_URL: https://appesztafatypbxzdunr.supabase.co
+  VITE_SUPABASE_ANON_KEY: ${{ secrets.COURT_SUPABASE_ANON_KEY }}
 
     steps:
       - name: Checkout
