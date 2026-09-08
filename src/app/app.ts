@@ -1,5 +1,6 @@
 import { parseRoute } from "./routes";
 import { getTodayFeed, type CourtMatch, type TodayFeed } from "../data/courtApi";
+import { isMainTourMatch } from "../domain/tourVisibility";
 import "../styles/tokens.css";
 import "../styles/layout.css";
 
@@ -43,17 +44,12 @@ function tournamentSections(matches: CourtMatch[]): string {
     </section>`;
   }).join("");
 }
-function isPrimary(m: CourtMatch): boolean { return m.level === "TOUR" || (!m.level && !/challenger|\b(w|m)\d{2,3}\b|itf/i.test(m.tournamentName)); }
-function isChallenger(m: CourtMatch): boolean { return m.level === "CHALLENGER" || /challenger/i.test(m.tournamentName); }
 function todayContent(feed: TodayFeed): string {
-  const all = [...feed.live, ...feed.upcoming].filter(m => m.eventType === "singles");
-  const primary = all.filter(isPrimary);
-  const challengers = all.filter(m => !isPrimary(m) && isChallenger(m));
-  const more = all.filter(m => !isPrimary(m) && !isChallenger(m));
-  return `<div class="feed-status">${feed.live.length ? `${feed.live.length} live` : "No live matches"} · updated ${new Intl.DateTimeFormat("en-CA", {hour:"numeric", minute:"2-digit"}).format(new Date(feed.fetchedAt))}</div>
-    ${primary.length ? tournamentSections(primary) : `<p class="empty-note">No ATP or WTA tour matches in the free feed right now.</p>`}
-    ${challengers.length ? `<div class="section-kicker">CHALLENGER</div>${tournamentSections(challengers)}` : ""}
-    ${more.length ? `<details class="more-matches"><summary>More Matches <span>${more.length}</span></summary>${tournamentSections(more)}</details>` : ""}`;
+  const visibleLive = feed.live.filter(m => m.eventType === "singles" && isMainTourMatch(m));
+  const visibleUpcoming = feed.upcoming.filter(m => m.eventType === "singles" && isMainTourMatch(m));
+  const matches = [...visibleLive, ...visibleUpcoming];
+  return `<div class="feed-status">${visibleLive.length ? `${visibleLive.length} live` : "No live matches"} · updated ${new Intl.DateTimeFormat("en-CA", {hour:"numeric", minute:"2-digit"}).format(new Date(feed.fetchedAt))}</div>
+    ${matches.length ? tournamentSections(matches) : `<p class="empty-note">No ATP or WTA tour matches in the free feed right now.</p>`}`;
 }
 function todayView(body = `<div class="loading">Loading today’s matches…</div>`): string {
   return `<header class="masthead"><div><div class="eyebrow">${dayHeading()}</div><h1>Today</h1></div><button class="quiet-button" aria-label="Text size">Aa</button></header><main>${body}</main>`;

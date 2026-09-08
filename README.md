@@ -4,7 +4,7 @@ A quiet personal dashboard for following professional tennis.
 
 ## Status
 
-v0.2.2 connects Today to Court's Supabase `court-tennis` broker. The UI consumes only Court's normalized provider-neutral response, defaults to singles, keeps ATP/WTA prominent, places Challenger below the main tour, and collapses ITF/other events under More Matches. Missing live-score data is treated as optional.
+v0.2.3 connects Today to Court's Supabase `court-tennis` broker. The UI consumes only Court's normalized provider-neutral response, defaults to singles, keeps ATP/WTA prominent, places Challenger below the main tour, and collapses ITF/other events under More Matches. Missing live-score data is treated as optional.
 
 ## Configuration
 
@@ -23,4 +23,3 @@ Production build:
 ```bash
 npm run build
 ```
-
