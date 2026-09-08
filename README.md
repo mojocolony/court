@@ -23,3 +23,12 @@ Production build:
 ```bash
 npm run build
 ```
+
+
+## GitHub Pages deployment
+
+The repository includes `.github/workflows/deploy.yml`.
+
+In GitHub, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
+Each push to `main` will install dependencies on GitHub, run the test suite, build Court,
+and deploy `dist/` only if the tests and build pass.
