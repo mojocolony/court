@@ -4,11 +4,11 @@ A quiet personal dashboard for following professional tennis.
 
 ## Status
 
-v0.1.0 establishes the tested application shell, Court domain model, relevance ranking,
-derived recent-record calculations, and spoiler-safe result projection.
+v0.2.0 connects Today to Court's Supabase `court-tennis` broker. The UI consumes only Court's normalized provider-neutral response, defaults to singles, keeps ATP/WTA prominent, places Challenger below the main tour, and collapses ITF/other events under More Matches. Missing live-score data is treated as optional.
 
-The visible Today screen is intentionally a shell using sample content. Real tennis data
-is connected in the next implementation checkpoint through a provider-neutral broker.
+## Configuration
+
+Court's GitHub Actions deployment expects the repository secret `COURT_SUPABASE_ANON_KEY`. This is the public/anon key for the shared Ticking Supabase project; the Live Tennis provider key remains server-side in the Edge Function and must never be added to the frontend.
 
 ## Development
 
@@ -23,12 +23,3 @@ Production build:
 ```bash
 npm run build
 ```
-
-
-## GitHub Pages deployment
-
-The repository includes `.github/workflows/deploy.yml`.
-
-In GitHub, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**.
-Each push to `main` will install dependencies on GitHub, run the test suite, build Court,
-and deploy `dist/` only if the tests and build pass.
