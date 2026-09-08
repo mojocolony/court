@@ -1,4 +1,5 @@
 import { readOrRefreshSharedSession } from './supabaseSession';
+import { readBaselineSettings, writeBaselineSettings, type BaselineSettings } from '../domain/settings';
 import { listMatchPersonalRecords, writeMatchPersonalState, type MatchPersonalState } from '../domain/matchPersonalState';
 import {
   followPlayer,
@@ -33,11 +34,14 @@ async function authenticatedRequest(path:string, init:RequestInit = {}):Promise<
 }
 
 export async function hydratePersonalData():Promise<'synced'|'local'> {
-  const matches = await authenticatedRequest('court_match_state?select=match_id,starred,watch_state,note,watched_at,match_data');
-  const players = await authenticatedRequest('court_followed_players?select=player_id,player_data');
-  const tournaments = await authenticatedRequest('court_followed_tournaments?select=tournament_id,tournament_data');
-  if(!matches || !players || !tournaments) return 'local';
-  if(!matches.ok || !players.ok || !tournaments.ok) return 'local';
+  const [matches,players,tournaments,settings] = await Promise.all([
+    authenticatedRequest('court_match_state?select=match_id,starred,watch_state,note,watched_at,match_data'),
+    authenticatedRequest('court_followed_players?select=player_id,player_data'),
+    authenticatedRequest('court_followed_tournaments?select=tournament_id,tournament_data'),
+    authenticatedRequest('court_settings?select=global_spoiler_mode&limit=1')
+  ]);
+  if(!matches || !players || !tournaments || !settings) return 'local';
+  if(!matches.ok || !players.ok || !tournaments.ok || !settings.ok) return 'local';
 
   const matchRows = await matches.json() as Array<Record<string,unknown>>;
   for(const row of matchRows) {
@@ -61,6 +65,8 @@ export async function hydratePersonalData():Promise<'synced'|'local'> {
   for(const row of tournamentRows) {
     if(row.tournament_data && typeof row.tournament_data==='object') followTournament(row.tournament_data as FollowedTournament);
   }
+  const settingsRows = await settings.json() as Array<Record<string,unknown>>;
+  if(settingsRows[0]) writeBaselineSettings({ globalSpoilerMode:settingsRows[0].global_spoiler_mode===true });
 
   const localMatches=listMatchPersonalRecords();
   if(localMatches.length) {
@@ -86,6 +92,7 @@ export async function hydratePersonalData():Promise<'synced'|'local'> {
       body:JSON.stringify(localTournaments.map(tournament=>({tournament_id:tournament.id,tournament_data:tournament,updated_at:new Date().toISOString()})))
     });
   }
+  if(!settingsRows.length) await persistSettings(readBaselineSettings());
   return 'synced';
 }
 
@@ -125,5 +132,15 @@ export async function persistFollowedTournament(tournament:FollowedTournament, f
     method:'POST', headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
     body:JSON.stringify({ tournament_id:tournament.id, tournament_data:tournament, updated_at:new Date().toISOString() })
   } : { method:'DELETE' });
+  return Boolean(response?.ok);
+}
+
+
+export async function persistSettings(settings:BaselineSettings):Promise<boolean> {
+  const response=await authenticatedRequest('court_settings?on_conflict=user_id',{
+    method:'POST',
+    headers:{Prefer:'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({ global_spoiler_mode:settings.globalSpoilerMode, updated_at:new Date().toISOString() })
+  });
   return Boolean(response?.ok);
 }

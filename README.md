@@ -4,11 +4,11 @@ A quiet personal dashboard for following professional tennis.
 
 ## Status
 
-v0.6.2 is the first functional build on top of the Baseline editorial design. Today keeps the ATP/WTA and Singles/Doubles order-of-play view, now with personal relevance ordering and spoiler-safe score hiding for matches placed in Watch.
+v0.7.0 is the consolidated functional pass on top of the Baseline editorial design. Today keeps the ATP/WTA and Singles/Doubles order-of-play view with personal relevance ordering and spoiler-safe score hiding.
 
-Players now supports live ATP/WTA player search, followed players, player profiles, and upcoming-match context where the free provider has it. Tour entries open tournament detail pages and tournaments can be followed. Watch now contains working Up Next, Watch Later, and Watched sections with match snapshots and notes.
+Players supports live ATP/WTA search, followed players, player profiles, and upcoming-match context where the free provider has it. Tour now loads a multi-day ATP/WTA slate into the season timeline, and tournament detail pages show live and upcoming matches when available. Watch contains working Up Next, Watch Later, and Watched sections, refreshes stale match snapshots near start time, and includes an optional global Spoiler Mode.
 
-Star, Watch, Note, followed-player, and followed-tournament data are stored locally immediately. When Baseline can reuse an authenticated Supabase session for the shared Ticking project on the same browser origin, those personal records also sync to Court-prefixed RLS-protected Supabase tables. This preserves the existing internal Court naming while the visible product remains Baseline.
+Star, Watch, Note, followed-player, followed-tournament, and spoiler-mode data are stored locally immediately. When Baseline can reuse an authenticated Supabase session for the shared Ticking project on the same browser origin, those personal records also sync to Court-prefixed RLS-protected Supabase tables. This preserves the existing internal Court naming while the visible product remains Baseline.
 
 ## Internal naming
 

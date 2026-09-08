@@ -12,4 +12,13 @@ assert.match(app, /data-profile-follow/, 'player profiles must expose Follow');
 assert.match(app, /rankMatches\(filtered, aggregatePersonalState\(\)/, 'Today must apply personal relevance ordering');
 assert.match(personal, /court_match_state/, 'personal match state must have a Supabase persistence path');
 assert.match(personal, /court_followed_players/, 'followed players must have a Supabase persistence path');
+const edge = await readFile(new URL('../supabase/functions/court-tennis/index.ts', import.meta.url), 'utf8');
+assert.match(api, /export async function getTourSlate/, 'Tour must load a multi-day ATP/WTA slate');
+assert.match(app, /data-spoiler-mode/, 'Watch must expose global spoiler mode');
+assert.match(app, /refreshWatchSnapshots/, 'Watch must refresh stale match snapshots');
+assert.match(edge, /route===\"tour_slate\"/, 'backend must expose a tour slate route');
+assert.match(edge, /raw\.winner===1/, 'backend must honor provider winner 1|2 on completed matches');
+assert.match(personal, /export async function persistSettings/, 'global spoiler preference must have a Supabase persistence path');
+assert.match(personal, /court_settings/, 'global spoiler preference must use an isolated Court settings table');
+
 console.log('baseline functional checks passed');

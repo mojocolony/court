@@ -1,14 +1,17 @@
 import { createIcons, CalendarDays, Trophy, Users, Eye } from "lucide";
 import { parseRoute } from "./routes";
-import { getMatch, getPlayer, getTodayFeed, getTournament, searchPlayers, type CourtMatch, type CourtPlayer, type CourtTournament, type TodayFeed } from "../data/courtApi";
+import { getMatch, getPlayer, getTodayFeed, getTourSlate, getTournament, searchPlayers, type CourtMatch, type CourtPlayer, type CourtTournament, type TodayFeed } from "../data/courtApi";
 import { filterTodayMatches, type DrawFilter, type TourFilter } from "./todayFilters";
 import { dateFromLocalKey, dateRailItems, localDateKey } from "./todayDates";
 import { matchHeading } from "./matchHeading";
 import { completedMatchPresentation, matchIsCompleted, setScoreLabel } from "./matchPresentation";
+import { watchMatchPresentation } from "./watchPresentation";
+import { tourTimelineEvents } from "./tourPresentation";
 import { countryDisplayName, dedupePlayers, handDisplayName } from "./playerPresentation";
 import { listMatchPersonalRecords, readMatchPersonalState, watchStateIsProtected, writeMatchPersonalState, type MatchPersonalState, type WatchState } from "../domain/matchPersonalState";
 import { followPlayer, followTournament, isPlayerFollowed, isTournamentFollowed, listFollowedPlayers, listFollowedTournaments, unfollowPlayer, unfollowTournament, type FollowedPlayer, type FollowedTournament } from "../domain/followedState";
-import { persistFollowedPlayer, persistFollowedTournament, persistMatchState } from "../data/personalData";
+import { persistFollowedPlayer, persistFollowedTournament, persistMatchState, persistSettings } from "../data/personalData";
+import { readBaselineSettings, writeBaselineSettings } from "../domain/settings";
 import { rankMatches } from "../domain/relevance";
 import type { PersonalState } from "../domain/types";
 import "../styles/tokens.css";
@@ -25,6 +28,7 @@ let tourFilter: TourFilter = "BOTH";
 let drawFilter: DrawFilter = "singles";
 let selectedDate = new Date();
 let lastFeed: TodayFeed | undefined;
+let tourSlate: CourtMatch[] = [];
 let request: AbortController | undefined;
 let playerSearchRequest: AbortController | undefined;
 let playerSearchQuery = "";
@@ -94,7 +98,7 @@ function aggregatePersonalState(): PersonalState {
     starredMatchIds: records.filter(record => record.state.starred).map(record => record.id),
     watchMatchIds: records.filter(record => watchStateIsProtected(record.state)).map(record => record.id),
     watchedMatchIds: records.filter(record => record.state.watchState === "watched").map(record => record.id),
-    globalSpoilerMode: false
+    globalSpoilerMode: readBaselineSettings().globalSpoilerMode
   };
 }
 
@@ -105,7 +109,7 @@ function significantRound(round?: string) {
 
 function matchRow(match: CourtMatch) {
   const state = readMatchPersonalState(match.id);
-  const protectedScore = watchStateIsProtected(state) && !revealedMatchIds.has(match.id) && (match.status === "live" || match.status === "completed");
+  const protectedScore = (readBaselineSettings().globalSpoilerMode || watchStateIsProtected(state)) && !revealedMatchIds.has(match.id) && (match.status === "live" || match.status === "completed");
   const score = protectedScore ? "" : setScoreLabel(match);
   const round = matchHeading(match.round, match.roundCode);
   return `<a class="match" href="#/match/${encodeURIComponent(match.id)}">
@@ -225,25 +229,26 @@ function tourView() {
     new Intl.DateTimeFormat("en-CA", { month: "long" }).format(new Date(now.getFullYear(), month, 1))
   );
   const current = now.getMonth();
-  const currentMatches = lastFeed ? [...lastFeed.live, ...lastFeed.upcoming] : [];
-  const events = new Map<string, CourtMatch>();
-  for (const match of currentMatches) {
-    if (!events.has(match.tournamentId || match.tournamentName)) events.set(match.tournamentId || match.tournamentName, match);
+  const events = tourTimelineEvents(tourSlate, listFollowedTournaments().map(item => item.id));
+  const byMonth = new Map<number, typeof events>();
+  for (const event of events) {
+    const date = new Date(event.scheduledAt);
+    if (Number.isNaN(date.getTime()) || date.getFullYear() !== now.getFullYear()) continue;
+    const month = date.getMonth();
+    byMonth.set(month, [...(byMonth.get(month) ?? []), event]);
   }
-  const currentEvents = [...events.values()].map(match => {
-    const inner=`<div><span class="tour-event-name">${escapeHtml(match.tournamentName)}</span><span class="tour-event-meta">${escapeHtml(match.tour)} · ${escapeHtml(match.eventType)}</span></div><span class="surface ${match.surface}">${escapeHtml(match.surface.toUpperCase())}</span>`;
-    return match.tournamentId
-      ? `<a class="tour-event" href="#/tournament/${encodeURIComponent(match.tournamentId)}">${inner}</a>`
-      : `<div class="tour-event">${inner}</div>`;
+  const eventMarkup = (index:number) => (byMonth.get(index) ?? []).map(event => {
+    const inner=`<div><span class="tour-event-name">${escapeHtml(event.tournamentName)}</span><span class="tour-event-meta">${escapeHtml(event.tour)}${event.followed ? " · Following" : ""}</span></div><span class="surface ${event.surface}">${escapeHtml(event.surface.toUpperCase())}</span>`;
+    return `<a class="tour-event ${event.followed ? "is-followed" : ""}" href="#/tournament/${encodeURIComponent(event.tournamentId)}">${inner}</a>`;
   }).join("");
 
   return `${secondaryHero("Tour", `${now.getFullYear()} season`, "Season almanac")}
     <main class="tour-timeline">${monthNames.map((month, index) => `<section class="tour-month ${index === current ? "current" : ""}">
       <div class="tour-month-marker">${index === current ? `<span>Current</span>` : ""}</div>
       <h2>${escapeHtml(month)}</h2>
-      <div class="tour-month-content">${index === current
-        ? currentEvents || `<p class="timeline-note">Current tournaments will appear here as schedule data becomes available.</p>`
-        : `<span class="timeline-rule"></span>`}</div>
+      <div class="tour-month-content">${eventMarkup(index) || (index === current
+        ? `<p class="timeline-note">Current and upcoming ATP/WTA tournaments will appear here as schedule data becomes available.</p>`
+        : `<span class="timeline-rule"></span>`)}</div>
     </section>`).join("")}</main>`;
 }
 
@@ -299,23 +304,26 @@ function playersView() {
 
 function watchMatchRow(record: ReturnType<typeof listMatchPersonalRecords>[number]) {
   const { state, id } = record;
-  const match = state.match;
+  const match = state.match as CourtMatch | undefined;
   if (!match) return "";
-  const when = match.scheduledAt ? timeLabel(match as CourtMatch) : "TBD";
+  const presentation = watchMatchPresentation(match, state, readBaselineSettings().globalSpoilerMode, revealedMatchIds.has(id));
+  const when = presentation.statusLabel || (match.scheduledAt ? timeLabel(match) : "TBD");
   const round = matchHeading(match.round, "roundCode" in match ? match.roundCode : undefined);
   const targetActions = state.watchState === "up_next"
     ? `<button data-watch-move="later" data-match-id="${escapeHtml(id)}">Later</button><button data-watch-move="watched" data-match-id="${escapeHtml(id)}">Watched</button>`
     : state.watchState === "later"
       ? `<button data-watch-move="up_next" data-match-id="${escapeHtml(id)}">Up Next</button><button data-watch-move="watched" data-match-id="${escapeHtml(id)}">Watched</button>`
       : `<button data-watch-move="up_next" data-match-id="${escapeHtml(id)}">Watch again</button>`;
+  const reveal = presentation.resultHidden ? `<button data-watch-reveal="${escapeHtml(id)}">Reveal</button>` : "";
   return `<article class="watch-match-row">
     <a href="#/match/${encodeURIComponent(id)}" class="watch-match-link">
       <span class="watch-time">${escapeHtml(when)}</span>
       <span class="watch-players">${escapeHtml(match.home.name)} <i>vs</i> ${escapeHtml(match.away.name)}</span>
       <span class="watch-context">${escapeHtml(match.tournamentName)} · ${escapeHtml(round)}</span>
+      <span class="watch-result">${presentation.resultHidden ? "Result hidden" : escapeHtml(presentation.scoreLabel)}</span>
       ${state.note ? `<span class="watch-note">${escapeHtml(state.note)}</span>` : ""}
     </a>
-    <div class="watch-row-actions">${targetActions}<button data-watch-move="none" data-match-id="${escapeHtml(id)}">Remove</button></div>
+    <div class="watch-row-actions">${reveal}${targetActions}<button data-watch-move="none" data-match-id="${escapeHtml(id)}">Remove</button></div>
   </article>`;
 }
 
@@ -332,7 +340,9 @@ function watchSection(title:string, state:WatchState, copy:string) {
 }
 
 function watchView() {
+  const spoiler=readBaselineSettings().globalSpoilerMode;
   return `${secondaryHero("Watch", "Personal", "Spoiler-safe viewing")}
+    <div class="watch-toolbar"><span>Global spoiler mode</span><button data-spoiler-mode aria-pressed="${spoiler}" class="${spoiler ? "active" : ""}">${spoiler ? "On" : "Off"}</button></div>
     <main class="watch-sections">
       ${watchSection("Up Next", "up_next", "Matches you choose to watch will appear here in start-time order, with broadcast information when available.")}
       ${watchSection("Watch Later", "later", "Keep matches here when you want to preserve them without committing to watching live.")}
@@ -378,12 +388,16 @@ function tournamentAsFollowed(tournament:CourtTournament):FollowedTournament {
 function tournamentDetailView(tournament:CourtTournament) {
   const followed=isTournamentFollowed(tournament.id);
   const location=[tournament.city,tournament.country].filter(Boolean).join(", ");
+  const matches=[...(tournament.live ?? []), ...(tournament.upcoming ?? [])];
+  const groups=new Map<string,CourtMatch[]>();
+  for(const match of matches) groups.set(match.eventType,[...(groups.get(match.eventType) ?? []),match]);
+  const schedules=[...groups.entries()].map(([draw,items])=>`<section class="tournament-detail-schedule"><div class="section-heading"><h2>${escapeHtml(draw[0].toUpperCase()+draw.slice(1))}</h2><span>${items.length}</span></div><div class="schedule-head" aria-hidden="true"><span>Time</span><span>Round</span><span>Match</span><span>Status</span></div><div class="schedule-body">${items.map(matchRow).join("")}</div></section>`).join("");
   return `<a class="back-link" href="#/tour">← Tour</a>
     <header class="tournament-profile-hero">
       <div><div class="eyebrow">${escapeHtml(tournament.tour)} · ${escapeHtml(tournament.category?.replaceAll("_"," ") ?? "Tournament")}</div><h1>${escapeHtml(tournament.name)}</h1><p>${escapeHtml([location, tournament.surface !== "unknown" ? tournament.surface : ""].filter(Boolean).join(" · "))}</p></div>
       <button class="follow-control ${followed ? "active" : ""}" data-tournament-follow="${escapeHtml(tournament.id)}">${followed ? "Following" : "Follow"}</button>
     </header>
-    <main class="tournament-profile-main"><nav class="detail-tabs"><span class="active">Matches</span><span>Draw</span><span>Players</span><span>Info</span></nav><p class="editorial-empty">Today and upcoming match schedules will appear here when available. Draw data remains provider-dependent on the free plan.</p></main>`;
+    <main class="tournament-profile-main"><nav class="detail-tabs"><span class="active">Matches</span><span>Draw</span><span>Players</span><span>Info</span></nav>${schedules || `<p class="editorial-empty">No live or upcoming matches are currently listed for this tournament.</p>`}</main>`;
 }
 
 function shell(routeName: string, content: string) {
@@ -404,7 +418,7 @@ function shell(routeName: string, content: string) {
 function matchView(match: CourtMatch) {
   const state = readMatchPersonalState(match.id);
   const completed = matchIsCompleted(match);
-  const protectedScore = watchStateIsProtected(state) && !revealedMatchIds.has(match.id) && (match.status === "live" || completed);
+  const protectedScore = (readBaselineSettings().globalSpoilerMode || watchStateIsProtected(state)) && !revealedMatchIds.has(match.id) && (match.status === "live" || completed);
   const presentation = completedMatchPresentation(match);
   const score = protectedScore ? "" : presentation.scoreLabel;
   const winnerPlayerId = protectedScore ? undefined : presentation.winnerPlayerId;
@@ -584,6 +598,23 @@ function wirePlayers(root:HTMLElement) {
 }
 
 function wireWatch(root:HTMLElement) {
+  root.querySelector<HTMLButtonElement>("[data-spoiler-mode]")?.addEventListener("click",()=>{
+    const current=readBaselineSettings();
+    const next={globalSpoilerMode:!current.globalSpoilerMode};
+    writeBaselineSettings(next);
+    void persistSettings(next);
+    renderRoot(root,shell("watch",watchView()));
+    wireWatch(root);
+  });
+  root.querySelectorAll<HTMLButtonElement>("[data-watch-reveal]").forEach(button=>{
+    button.onclick=()=>{
+      const id=button.dataset.watchReveal;
+      if(!id) return;
+      revealedMatchIds.add(id);
+      renderRoot(root,shell("watch",watchView()));
+      wireWatch(root);
+    };
+  });
   root.querySelectorAll<HTMLButtonElement>("[data-watch-move]").forEach(button=>{
     button.onclick=()=>{
       const id=button.dataset.matchId;
@@ -597,6 +628,31 @@ function wireWatch(root:HTMLElement) {
       wireWatch(root);
     };
   });
+}
+
+function watchRefreshDue(id:string, match:CourtMatch) {
+  if(match.status==="completed"||match.status==="cancelled") return false;
+  const scheduled=Date.parse(match.scheduledAt);
+  if(Number.isNaN(scheduled)||scheduled>Date.now()+30*60_000) return false;
+  const key=`baseline:watch-refresh:${id}`;
+  const last=Number(localStorage.getItem(key) ?? 0);
+  const ttl=match.status==="live"?2*60_000:10*60_000;
+  if(last&&Date.now()-last<ttl) return false;
+  localStorage.setItem(key,String(Date.now()));
+  return true;
+}
+
+async function refreshWatchSnapshots(root:HTMLElement) {
+  const candidates=listMatchPersonalRecords().filter(record=>record.state.match&&record.state.watchState!=="none"&&watchRefreshDue(record.id,record.state.match as CourtMatch)).slice(0,6);
+  if(!candidates.length) return;
+  await Promise.allSettled(candidates.map(async record=>{
+    const match=await getMatch(record.id);
+    const state=readMatchPersonalState(record.id);
+    saveMatchState(match,state);
+  }));
+  if(parseRoute(location.hash).name!=="watch") return;
+  renderRoot(root,shell("watch",watchView()));
+  wireWatch(root);
 }
 
 function wirePlayerProfile(root:HTMLElement, player:CourtPlayer) {
@@ -675,19 +731,18 @@ export function renderApp(root: HTMLElement) {
   if (route.name === "watch") {
     renderRoot(root, shell("watch", watchView()));
     wireWatch(root);
+    void refreshWatchSnapshots(root);
     return;
   }
 
   if (route.name === "tour") {
     renderRoot(root, shell("tour", tourView()));
-    if (!lastFeed) {
-      request = new AbortController();
-      getTodayFeed(request.signal, "singles", new Date()).then(feed => {
-        if (parseRoute(location.hash).name !== "tour") return;
-        lastFeed = feed;
-        renderRoot(root, shell("tour", tourView()));
-      }).catch(() => { /* Tour keeps its honest empty timeline if schedule data is unavailable. */ });
-    }
+    request = new AbortController();
+    getTourSlate(request.signal, new Date(), 21).then(matches => {
+      if (parseRoute(location.hash).name !== "tour") return;
+      tourSlate = matches;
+      renderRoot(root, shell("tour", tourView()));
+    }).catch(() => { /* Tour keeps its honest timeline if schedule data is unavailable. */ });
     return;
   }
 

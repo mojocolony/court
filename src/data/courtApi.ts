@@ -46,6 +46,8 @@ export interface CourtTournament {
   city?: string;
   country?: string;
   category?: string;
+  live?: CourtMatch[];
+  upcoming?: CourtMatch[];
 }
 
 function config() {
@@ -91,6 +93,17 @@ export async function getTodayFeed(signal?: AbortSignal, draw: "singles" | "doub
   return edgeGet<TodayFeed>(new URLSearchParams({ route:"today", from, to, draw }), signal);
 }
 
+
+export async function getTourSlate(signal?:AbortSignal, start = new Date(), days = 21):Promise<CourtMatch[]> {
+  const from = new Date(start);
+  from.setHours(0,0,0,0);
+  const to = new Date(from);
+  to.setDate(to.getDate()+Math.max(1,days));
+  to.setMilliseconds(to.getMilliseconds()-1);
+  const body=await edgeGet<{matches:CourtMatch[]}>(new URLSearchParams({route:"tour_slate",from:from.toISOString(),to:to.toISOString()}), signal);
+  return body.matches;
+}
+
 export async function getMatch(id: string, signal?: AbortSignal): Promise<CourtMatch> {
   const body=await edgeGet<{match:CourtMatch}>(new URLSearchParams({route:"match",id}), signal);
   return body.match;
@@ -108,6 +121,6 @@ export async function getPlayer(id:string, signal?:AbortSignal):Promise<CourtPla
 }
 
 export async function getTournament(id:string, signal?:AbortSignal):Promise<CourtTournament> {
-  const body=await edgeGet<{tournament:CourtTournament}>(new URLSearchParams({route:"tournament",id}), signal);
-  return body.tournament;
+  const body=await edgeGet<{tournament:CourtTournament;live?:CourtMatch[];upcoming?:CourtMatch[]}>(new URLSearchParams({route:"tournament",id}), signal);
+  return { ...body.tournament, live:body.live ?? [], upcoming:body.upcoming ?? [] };
 }

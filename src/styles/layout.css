@@ -950,3 +950,53 @@ h2 {
   vertical-align: middle;
 }
 .match-score.is-final { font-variant-numeric: tabular-nums; }
+
+/* Consolidated functional pass */
+.tour-event.is-followed .tour-event-name { font-weight: 600; }
+.watch-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 14px;
+}
+.watch-toolbar button {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+.watch-toolbar button.active { color: var(--ink); font-weight: 600; }
+.watch-result {
+  grid-area: result;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .02em;
+}
+.watch-match-link {
+  grid-template-areas:
+    "time players context"
+    ". result result"
+    ". note note";
+}
+.tournament-detail-schedule { padding: 24px 0 12px; border-bottom: 1px solid var(--rule); }
+.tournament-detail-schedule .section-heading { margin-bottom: 10px; }
+.tournament-detail-schedule .section-heading h2 { font-size: 28px; }
+
+@media (max-width:760px) {
+  .watch-match-link {
+    grid-template-areas:
+      "time players"
+      ". context"
+      ". result"
+      ". note";
+  }
+  .watch-result { font-size: 11px; }
+  .tournament-detail-schedule .schedule-head { display: none; }
+}
