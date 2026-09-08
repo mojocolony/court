@@ -1,84 +1,30 @@
 import { parseRoute } from "./routes";
-import { getTodayFeed, type CourtMatch, type TodayFeed } from "../data/courtApi";
-import { isMainTourMatch } from "../domain/tourVisibility";
+import { getMatch, getTodayFeed, type CourtMatch, type TodayFeed } from "../data/courtApi";
+import { filterTodayMatches, type DrawFilter, type TourFilter } from "./todayFilters";
+import { readMatchPersonalState, writeMatchPersonalState } from "../domain/matchPersonalState";
 import "../styles/tokens.css";
 import "../styles/layout.css";
 
-const nav = [["today", "Today"], ["tour", "Tour"], ["players", "Players"], ["watch", "Watch"]] as const;
-
-function escapeHtml(value: unknown): string {
-  return String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
-}
-function dayHeading(): string {
-  return new Intl.DateTimeFormat("en-CA", { weekday:"long", month:"long", day:"numeric" }).format(new Date()).toUpperCase();
-}
-function timeLabel(match: CourtMatch): string {
-  if (match.status === "live") return "LIVE";
-  const date = new Date(match.scheduledAt);
-  return Number.isNaN(date.getTime()) ? "TBD" : new Intl.DateTimeFormat("en-CA", { hour:"numeric", minute:"2-digit" }).format(date);
-}
-function scoreLabel(match: CourtMatch): string {
-  if (!match.sets?.length) return "";
-  return match.sets.map(s => `${s.home}–${s.away}`).join("  ");
-}
-function playerLine(player: CourtMatch["home"]): string {
-  return `<span>${escapeHtml(player.name)}</span>${player.ranking ? `<span class="rank">${player.ranking}</span>` : ""}`;
-}
-function matchRow(match: CourtMatch): string {
-  const score = scoreLabel(match);
-  return `<a class="match" href="#/match/${encodeURIComponent(match.id)}">
-    <div class="match-time ${match.status === "live" ? "is-live" : ""}">${timeLabel(match)}${score ? `<span>${escapeHtml(score)}</span>` : ""}</div>
-    <div class="players"><div>${playerLine(match.home)}</div><div>${playerLine(match.away)}</div></div>
-    <div class="match-meta">${escapeHtml(match.round ?? "")}</div>
-  </a>`;
-}
-function tournamentKey(m: CourtMatch): string { return `${m.tournamentId}|${m.eventType}|${m.surface}`; }
-function tournamentSections(matches: CourtMatch[]): string {
-  const groups = new Map<string, CourtMatch[]>();
-  for (const match of matches) groups.set(tournamentKey(match), [...(groups.get(tournamentKey(match)) ?? []), match]);
-  return [...groups.values()].map(group => {
-    const first = group[0];
-    return `<section class="tournament">
-      <div class="tournament-head"><div><div class="eyebrow">${escapeHtml(first.tour)} · ${escapeHtml(first.eventType.toUpperCase())}</div><h2>${escapeHtml(first.tournamentName)}</h2></div><span class="surface ${first.surface}">${escapeHtml(first.surface.toUpperCase())}</span></div>
-      ${group.map(matchRow).join("")}
-    </section>`;
-  }).join("");
-}
-function todayContent(feed: TodayFeed): string {
-  const visibleLive = feed.live.filter(m => m.eventType === "singles" && isMainTourMatch(m));
-  const visibleUpcoming = feed.upcoming.filter(m => m.eventType === "singles" && isMainTourMatch(m));
-  const matches = [...visibleLive, ...visibleUpcoming];
-  return `<div class="feed-status">${visibleLive.length ? `${visibleLive.length} live` : "No live matches"} · updated ${new Intl.DateTimeFormat("en-CA", {hour:"numeric", minute:"2-digit"}).format(new Date(feed.fetchedAt))}</div>
-    ${matches.length ? tournamentSections(matches) : `<p class="empty-note">No ATP or WTA matches scheduled today.</p>`}`;
-}
-function todayView(body = `<div class="loading">Loading today’s matches…</div>`): string {
-  return `<header class="masthead"><div><div class="eyebrow">${dayHeading()}</div><h1>Today</h1></div><button class="quiet-button" aria-label="Text size">Aa</button></header><main>${body}</main>`;
-}
-function placeholder(title: string, copy: string): string { return `<header class="masthead"><div><div class="eyebrow">COURT</div><h1>${title}</h1></div></header><main><p class="intro">${copy}</p></main>`; }
-function shell(routeName: string, content: string): string {
-  return `<div class="shell"><div class="wordmark">COURT</div>${content}<nav class="bottom-nav">${nav.map(([key,label]) => `<a href="#/${key === "today" ? "" : key}" class="${routeName === key ? "active" : ""}">${label}</a>`).join("")}</nav></div>`;
-}
-
-let request: AbortController | undefined;
-export function renderApp(root: HTMLElement): void {
-  request?.abort();
-  const route = parseRoute(location.hash);
-  let content = todayView();
-  if (route.name === "tour") content = placeholder("Tour", "The season timeline will live here.");
-  if (route.name === "players") content = placeholder("Players", "Followed players and player search will live here.");
-  if (route.name === "watch") content = placeholder("Watch", "Your spoiler-safe viewing queue will live here.");
-  if (route.name === "match") content = placeholder("Match", "Match context, form, broadcast information and notes will live here.");
-  if (route.name === "player") content = placeholder("Player", "Current form, records and next-match context will live here.");
-  if (route.name === "tournament") content = placeholder("Tournament", "Matches, players and tournament information will live here.");
-  root.innerHTML = shell(route.name, content);
-
-  if (route.name === "today") {
-    request = new AbortController();
-    getTodayFeed(request.signal).then(feed => {
-      if (parseRoute(location.hash).name === "today") root.innerHTML = shell("today", todayView(todayContent(feed)));
-    }).catch(error => {
-      if (error instanceof DOMException && error.name === "AbortError") return;
-      if (parseRoute(location.hash).name === "today") root.innerHTML = shell("today", todayView(`<div class="data-error"><strong>Today couldn’t load.</strong><span>${escapeHtml(error instanceof Error ? error.message : "Tennis data is unavailable.")}</span><button onclick="location.reload()">Try again</button></div>`));
-    });
-  }
-}
+const nav = [["today","Today"],["tour","Tour"],["players","Players"],["watch","Watch"]] as const;
+let tourFilter: TourFilter = "BOTH";
+let drawFilter: DrawFilter = "singles";
+let lastFeed: TodayFeed | undefined;
+function escapeHtml(v:unknown){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));}
+function dayHeading(){return new Intl.DateTimeFormat("en-CA",{weekday:"long",month:"long",day:"numeric"}).format(new Date()).toUpperCase();}
+function timeLabel(m:CourtMatch){if(m.status==="live")return "LIVE";const d=new Date(m.scheduledAt);return Number.isNaN(d.getTime())?"TBD":new Intl.DateTimeFormat("en-CA",{hour:"numeric",minute:"2-digit"}).format(d);}
+function scoreLabel(m:CourtMatch){if(!m.sets?.length)return "";return m.sets.map((s:any)=>Array.isArray(s)?`${s[0]}–${s[1]}`:`${s.home}–${s.away}`).join("  ");}
+function playerLine(p:CourtMatch["home"]){return `<span>${escapeHtml(p.name)}</span>${p.ranking?`<span class="rank">${p.ranking}</span>`:""}`;}
+function matchRow(m:CourtMatch){const score=scoreLabel(m);return `<a class="match" href="#/match/${encodeURIComponent(m.id)}"><div class="match-time ${m.status==="live"?"is-live":""}">${timeLabel(m)}${score?`<span>${escapeHtml(score)}</span>`:""}</div><div class="players"><div>${playerLine(m.home)}</div><div>${playerLine(m.away)}</div></div><div class="match-meta">${escapeHtml(m.round??"")}</div></a>`;}
+function tournamentKey(m:CourtMatch){return `${m.tournamentId}|${m.eventType}|${m.surface}`;}
+function tournamentSections(matches:CourtMatch[]){const groups=new Map<string,CourtMatch[]>();for(const m of matches)groups.set(tournamentKey(m),[...(groups.get(tournamentKey(m))??[]),m]);return [...groups.values()].map(g=>{const f=g[0];return `<section class="tournament"><div class="tournament-head"><div><div class="eyebrow">${escapeHtml(f.tour)} · ${escapeHtml(f.eventType.toUpperCase())}</div><h2>${escapeHtml(f.tournamentName)}</h2></div><span class="surface ${f.surface}">${escapeHtml(f.surface.toUpperCase())}</span></div>${g.map(matchRow).join("")}</section>`}).join("");}
+function segmented(name:string, options:[string,string][], selected:string){return `<div class="segmented" data-filter="${name}">${options.map(([v,l])=>`<button data-value="${v}" class="${v===selected?"active":""}">${l}</button>`).join("")}</div>`;}
+function todayContent(feed:TodayFeed){const matches=filterTodayMatches([...feed.live,...feed.upcoming],tourFilter,drawFilter);const live=matches.filter(m=>m.status==="live");return `<div class="today-controls">${segmented("tour",[["BOTH","Both"],["ATP","ATP"],["WTA","WTA"]],tourFilter)}${segmented("draw",[["singles","Singles"],["doubles","Doubles"]],drawFilter)}</div><div class="feed-status">${live.length?`${live.length} live`:"No live matches"} · updated ${new Intl.DateTimeFormat("en-CA",{hour:"numeric",minute:"2-digit"}).format(new Date(feed.fetchedAt))}</div>${matches.length?tournamentSections(matches):`<p class="empty-note">No ${tourFilter==="BOTH"?"ATP or WTA":tourFilter} ${drawFilter} matches scheduled today.</p>`}`;}
+function todayView(body=`<div class="loading">Loading today’s matches…</div>`){return `<header class="masthead"><div><div class="eyebrow">${dayHeading()}</div><h1>Today</h1></div><button class="quiet-button" aria-label="Text size">Aa</button></header><main>${body}</main>`;}
+function placeholder(title:string,copy:string){return `<header class="masthead"><div><div class="eyebrow">COURT</div><h1>${title}</h1></div></header><main><p class="intro">${copy}</p></main>`;}
+function shell(routeName:string,content:string){return `<div class="shell"><div class="wordmark">COURT</div>${content}<nav class="bottom-nav">${nav.map(([k,l])=>`<a href="#/${k==="today"?"":k}" class="${routeName===k?"active":""}">${l}</a>`).join("")}</nav></div>`;}
+function matchView(m:CourtMatch){const state=readMatchPersonalState(m.id);return `<a class="back-link" href="#/">← Today</a><header class="match-masthead"><div class="eyebrow">${escapeHtml(m.tour)} · ${escapeHtml(m.tournamentName)} · ${escapeHtml(m.round??"")}</div><h1>Match</h1></header><main><div class="match-context"><span>${escapeHtml(m.surface.toUpperCase())}</span><span>${escapeHtml(timeLabel(m))}</span></div><div class="match-players"><div>${playerLine(m.home)}</div><div>${playerLine(m.away)}</div></div>${scoreLabel(m)?`<div class="match-score">${escapeHtml(scoreLabel(m))}</div>`:""}<div class="personal-actions"><button data-action="star" class="${state.starred?"active":""}">☆ <span>${state.starred?"Starred":"Star"}</span></button><button data-action="watch" class="${state.watch?"active":""}">◉ <span>${state.watch?"Watching":"Watch"}</span></button></div><label class="note-label" for="match-note">Note</label><textarea id="match-note" data-match-id="${escapeHtml(m.id)}" placeholder="Add a note…">${escapeHtml(state.note)}</textarea><div class="note-status" aria-live="polite"></div></main>`;}
+function wireToday(root:HTMLElement){root.querySelectorAll<HTMLElement>("[data-filter='tour'] button").forEach(b=>b.onclick=()=>{tourFilter=b.dataset.value as TourFilter;if(lastFeed)root.innerHTML=shell("today",todayView(todayContent(lastFeed))),wireToday(root);});root.querySelectorAll<HTMLElement>("[data-filter='draw'] button").forEach(b=>b.onclick=()=>{const next=b.dataset.value as DrawFilter;if(next===drawFilter)return;drawFilter=next;loadToday(root);});}
+function wireMatch(root:HTMLElement,m:CourtMatch){const get=()=>readMatchPersonalState(m.id);root.querySelector<HTMLElement>("[data-action='star']")!.onclick=()=>{const s=get();writeMatchPersonalState(m.id,{...s,starred:!s.starred});root.innerHTML=shell("match",matchView(m));wireMatch(root,m);};root.querySelector<HTMLElement>("[data-action='watch']")!.onclick=()=>{const s=get();writeMatchPersonalState(m.id,{...s,watch:!s.watch});root.innerHTML=shell("match",matchView(m));wireMatch(root,m);};const note=root.querySelector<HTMLTextAreaElement>("#match-note")!;let timer:number|undefined;note.oninput=()=>{clearTimeout(timer);timer=window.setTimeout(()=>{const s=get();writeMatchPersonalState(m.id,{...s,note:note.value});const status=root.querySelector(".note-status");if(status)status.textContent="Saved";},350);};}
+let request:AbortController|undefined;
+function loadToday(root:HTMLElement){request?.abort();request=new AbortController();root.innerHTML=shell("today",todayView());getTodayFeed(request.signal,drawFilter).then(feed=>{if(parseRoute(location.hash).name!=="today")return;lastFeed=feed;root.innerHTML=shell("today",todayView(todayContent(feed)));wireToday(root);}).catch(e=>{if(e instanceof DOMException&&e.name==="AbortError")return;if(parseRoute(location.hash).name==="today")root.innerHTML=shell("today",todayView(`<div class="data-error"><strong>Today couldn’t load.</strong><span>${escapeHtml(e instanceof Error?e.message:"Tennis data is unavailable.")}</span><button onclick="location.reload()">Try again</button></div>`));});}
+export function renderApp(root:HTMLElement){request?.abort();const route=parseRoute(location.hash);if(route.name==="today"){root.innerHTML=shell("today",todayView());loadToday(root);return;}if(route.name==="match"){root.innerHTML=shell("match",placeholder("Match","Loading match…"));request=new AbortController();getMatch(route.id,request.signal).then(m=>{if(parseRoute(location.hash).name!=="match")return;root.innerHTML=shell("match",matchView(m));wireMatch(root,m);}).catch(e=>{root.innerHTML=shell("match",placeholder("Match",e instanceof Error?e.message:"Match data is unavailable."));});return;}let content=route.name==="tour"?placeholder("Tour","The season timeline will live here."):route.name==="players"?placeholder("Players","Followed players and player search will live here."):route.name==="watch"?placeholder("Watch","Your spoiler-safe viewing queue will live here."):route.name==="player"?placeholder("Player","Current form, records and next-match context will live here."):placeholder("Tournament","Matches, players and tournament information will live here.");root.innerHTML=shell(route.name,content);}

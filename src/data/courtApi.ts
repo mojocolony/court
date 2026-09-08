@@ -41,10 +41,10 @@ export function localDayUtcRange(date = new Date()): { from: string; to: string 
   );
 }
 
-export async function getTodayFeed(signal?: AbortSignal): Promise<TodayFeed> {
+export async function getTodayFeed(signal?: AbortSignal, draw: "singles" | "doubles" = "singles"): Promise<TodayFeed> {
   const { url, key } = config();
   const { from, to } = localDayUtcRange();
-  const params = new URLSearchParams({ route: "today", from, to });
+  const params = new URLSearchParams({ route: "today", from, to, draw });
   const response = await fetch(`${url}/functions/v1/court-tennis?${params.toString()}`, {
     headers: {
       apikey: key,
@@ -60,4 +60,15 @@ export async function getTodayFeed(signal?: AbortSignal): Promise<TodayFeed> {
       : `Tennis data unavailable (${response.status}).`);
   }
   return response.json() as Promise<TodayFeed>;
+}
+
+export async function getMatch(id: string, signal?: AbortSignal): Promise<CourtMatch> {
+  const { url, key } = config();
+  const params = new URLSearchParams({ route: "match", id });
+  const response = await fetch(`${url}/functions/v1/court-tennis?${params.toString()}`, {
+    headers: { apikey:key, Authorization:`Bearer ${key}`, Accept:"application/json" }, signal
+  });
+  if (!response.ok) throw new Error(`Match data unavailable (${response.status}).`);
+  const body = await response.json() as { match: CourtMatch };
+  return body.match;
 }
