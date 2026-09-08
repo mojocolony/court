@@ -3,6 +3,7 @@ import type { TennisMatch } from "../domain/types";
 export type MatchLevel = "TOUR" | "CHALLENGER" | "ITF" | "OTHER";
 
 export interface CourtMatch extends TennisMatch {
+  roundCode?: string;
   level?: MatchLevel;
   home: TennisMatch["home"] & { handedness?: string };
   away: TennisMatch["away"] & { handedness?: string };

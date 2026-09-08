@@ -42,3 +42,8 @@ describe("Today local-day boundaries", () => {
     expect(range.to).toBe("2026-09-09T03:59:59.999Z");
   });
 });
+
+// Compile-time regression: provider round codes are part of Court match data.
+import type { CourtMatch } from "../src/data/courtApi";
+const _roundCodeContract: CourtMatch["roundCode"] = "R16";
+void _roundCodeContract;
