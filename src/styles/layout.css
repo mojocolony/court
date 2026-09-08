@@ -16,7 +16,7 @@
 
 .wordmark {
   font-family: var(--sans);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1;
   letter-spacing: .24em;
   font-weight: 700;
@@ -26,7 +26,7 @@
   display: flex;
   align-items: center;
   gap: 34px;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .top-nav a {
@@ -73,13 +73,14 @@
 .today-date {
   margin-top: 11px;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .quiet-button {
   border: 1px solid var(--rule);
   background: transparent;
-  padding: 7px 10px;
+  padding: 8px 11px;
+  font-size: 15px;
   color: var(--muted);
   cursor: pointer;
 }
@@ -107,13 +108,13 @@
 .date-rail button:first-child { padding-left: 0; }
 .date-rail button:last-child { border-right: 0; }
 .date-rail button span {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
 .date-rail button strong {
   font-family: var(--serif);
-  font-size: 24px;
+  font-size: 27px;
   line-height: 1;
   font-weight: 500;
 }
@@ -147,7 +148,7 @@
   background: transparent;
   padding: 5px 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 15px;
   cursor: pointer;
 }
 .segmented button.active {
@@ -168,7 +169,7 @@
   padding-bottom: 5px;
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: .02em;
   text-transform: uppercase;
 }
@@ -187,7 +188,7 @@
 .eyebrow,
 .round-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.2;
   letter-spacing: .13em;
   font-weight: 600;
@@ -203,7 +204,7 @@ h2 {
 }
 .surface {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: .1em;
   text-transform: uppercase;
   border-bottom: 3px solid var(--hard);
@@ -217,7 +218,7 @@ h2 {
 .schedule-head,
 .match {
   display: grid;
-  grid-template-columns: 110px 168px minmax(420px, 1fr) 190px;
+  grid-template-columns: 125px 160px minmax(520px, 1fr) 220px;
   grid-template-areas: "time round players status";
   column-gap: 24px;
 }
@@ -226,7 +227,7 @@ h2 {
   border-top: 1px solid var(--rule);
   color: var(--faint);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -243,7 +244,7 @@ h2 {
 .match-time {
   grid-area: time;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -251,16 +252,18 @@ h2 {
 .match-round {
   grid-area: round;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.35;
 }
 .players {
   grid-area: players;
   display: grid;
-  gap: 5px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(44px, 5vw, 88px);
+  row-gap: 5px;
   min-width: 0;
   font-family: var(--serif);
-  font-size: 21px;
+  font-size: 22px;
   line-height: 1.14;
 }
 .players > div {
@@ -274,7 +277,7 @@ h2 {
   flex: 0 0 auto;
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0;
 }
 .match-status {
@@ -285,13 +288,13 @@ h2 {
   gap: 12px;
   min-width: 0;
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted);
   text-align: right;
 }
 .match-score-inline {
   color: var(--ink);
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 .live-label {
@@ -305,7 +308,7 @@ h2 {
   align-items: center;
   gap: 8px;
   color: var(--ink);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .08em;
 }
 
@@ -313,6 +316,7 @@ h2 {
 .empty-note {
   padding: 34px 0;
   color: var(--muted);
+  font-size: 16px;
   line-height: 1.55;
 }
 .data-error {
@@ -524,7 +528,7 @@ h2 {
     padding: 15px 0 16px;
   }
   .match-time { padding-top: 3px; font-size: 10px; }
-  .players { font-size: 17px; gap: 6px; }
+  .players { grid-template-columns: 1fr; font-size: 17px; row-gap: 6px; }
   .match-round { font-size: 10px; }
   .match-status {
     justify-content: flex-start;
@@ -567,6 +571,7 @@ h2 {
 }
 
 @media (min-width: 761px) and (max-width: 980px) {
+  .players { grid-template-columns: 1fr; row-gap: 5px; }
   .schedule-head,
   .match {
     grid-template-columns: 78px 120px minmax(240px, 1fr) 110px;
