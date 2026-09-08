@@ -1,8 +1,8 @@
 .shell {
   min-height: 100dvh;
-  width: min(100%, 1180px);
+  width: min(calc(100% - 48px), 1540px);
   margin: 0 auto;
-  padding: 34px 34px 72px;
+  padding: 40px 44px 80px;
 }
 
 .app-header {
@@ -16,7 +16,7 @@
 
 .wordmark {
   font-family: var(--sans);
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1;
   letter-spacing: .24em;
   font-weight: 700;
@@ -25,8 +25,8 @@
 .top-nav {
   display: flex;
   align-items: center;
-  gap: 30px;
-  font-size: 13px;
+  gap: 34px;
+  font-size: 15px;
 }
 
 .top-nav a {
@@ -66,20 +66,20 @@
 }
 
 .today-hero h1 {
-  font-size: clamp(44px, 5vw, 72px);
+  font-size: clamp(50px, 4vw, 78px);
   line-height: .94;
 }
 
 .today-date {
   margin-top: 11px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .quiet-button {
-  border: 0;
+  border: 1px solid var(--rule);
   background: transparent;
-  padding: 8px 0;
+  padding: 7px 10px;
   color: var(--muted);
   cursor: pointer;
 }
@@ -94,7 +94,7 @@
   border: 0;
   border-right: 1px solid var(--rule);
   background: transparent;
-  min-height: 66px;
+  min-height: 82px;
   padding: 12px 12px 11px;
   display: grid;
   align-content: center;
@@ -107,13 +107,13 @@
 .date-rail button:first-child { padding-left: 0; }
 .date-rail button:last-child { border-right: 0; }
 .date-rail button span {
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
 .date-rail button strong {
   font-family: var(--serif);
-  font-size: 21px;
+  font-size: 24px;
   line-height: 1;
   font-weight: 500;
 }
@@ -147,7 +147,7 @@
   background: transparent;
   padding: 5px 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   cursor: pointer;
 }
 .segmented button.active {
@@ -168,13 +168,13 @@
   padding-bottom: 5px;
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .02em;
   text-transform: uppercase;
 }
 
 .tournament {
-  padding: 38px 0 8px;
+  padding: 44px 0 8px;
   border-bottom: 1px solid var(--ink);
 }
 .tournament-head {
@@ -187,7 +187,7 @@
 .eyebrow,
 .round-label {
   color: var(--muted);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.2;
   letter-spacing: .13em;
   font-weight: 600;
@@ -196,14 +196,14 @@
 h2 {
   margin: 4px 0 0;
   font-family: var(--serif);
-  font-size: clamp(25px, 3vw, 34px);
+  font-size: clamp(30px, 2.6vw, 38px);
   line-height: 1;
   font-weight: 500;
   letter-spacing: -.025em;
 }
 .surface {
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: .1em;
   text-transform: uppercase;
   border-bottom: 3px solid var(--hard);
@@ -217,7 +217,7 @@ h2 {
 .schedule-head,
 .match {
   display: grid;
-  grid-template-columns: 88px 142px minmax(260px, 1fr) 130px;
+  grid-template-columns: 110px 168px minmax(420px, 1fr) 190px;
   grid-template-areas: "time round players status";
   column-gap: 24px;
 }
@@ -226,15 +226,16 @@ h2 {
   border-top: 1px solid var(--rule);
   color: var(--faint);
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1;
   letter-spacing: .12em;
   text-transform: uppercase;
 }
+.schedule-head span:last-child { opacity: .55; }
 .match {
   align-items: center;
-  min-height: 80px;
-  padding: 13px 0;
+  min-height: 92px;
+  padding: 16px 0;
   border-top: 1px solid var(--rule);
 }
 .schedule-body .match:first-child { border-top-color: var(--rule-strong); }
@@ -242,7 +243,7 @@ h2 {
 .match-time {
   grid-area: time;
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -250,7 +251,7 @@ h2 {
 .match-round {
   grid-area: round;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.35;
 }
 .players {
@@ -259,8 +260,8 @@ h2 {
   gap: 5px;
   min-width: 0;
   font-family: var(--serif);
-  font-size: 18px;
-  line-height: 1.12;
+  font-size: 21px;
+  line-height: 1.14;
 }
 .players > div {
   display: flex;
@@ -273,7 +274,7 @@ h2 {
   flex: 0 0 auto;
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0;
 }
 .match-status {
@@ -284,13 +285,13 @@ h2 {
   gap: 12px;
   min-width: 0;
   font-family: var(--mono);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--muted);
   text-align: right;
 }
 .match-score-inline {
   color: var(--ink);
-  font-size: 11px;
+  font-size: 12px;
   white-space: nowrap;
 }
 .live-label {
@@ -304,7 +305,7 @@ h2 {
   align-items: center;
   gap: 8px;
   color: var(--ink);
-  font-size: 8px;
+  font-size: 9px;
   letter-spacing: .08em;
 }
 
