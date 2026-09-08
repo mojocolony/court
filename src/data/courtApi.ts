@@ -5,6 +5,10 @@ export type MatchLevel = "TOUR" | "CHALLENGER" | "ITF" | "OTHER";
 export interface CourtMatch extends TennisMatch {
   roundCode?: string;
   level?: MatchLevel;
+  eventStatus?: string;
+  setCounts?: number[];
+  games?: unknown[][];
+  points?: unknown[];
   home: TennisMatch["home"] & { handedness?: string; birthday?: string };
   away: TennisMatch["away"] & { handedness?: string; birthday?: string };
 }

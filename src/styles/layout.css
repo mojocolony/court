@@ -931,3 +931,22 @@ h2 {
 @media (max-width:760px) {
   .player-next-match { grid-template-columns: 1fr; gap: 6px; }
 }
+
+/* Completed-match clarity */
+.match-context .is-final {
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: .12em;
+}
+.match-player.is-winner .player-name { font-weight: 600; }
+.winner-label {
+  margin-left: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.match-score.is-final { font-variant-numeric: tabular-nums; }

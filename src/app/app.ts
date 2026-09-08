@@ -4,6 +4,8 @@ import { getMatch, getPlayer, getTodayFeed, getTournament, searchPlayers, type C
 import { filterTodayMatches, type DrawFilter, type TourFilter } from "./todayFilters";
 import { dateFromLocalKey, dateRailItems, localDateKey } from "./todayDates";
 import { matchHeading } from "./matchHeading";
+import { completedMatchPresentation, matchIsCompleted, setScoreLabel } from "./matchPresentation";
+import { countryDisplayName, dedupePlayers, handDisplayName } from "./playerPresentation";
 import { listMatchPersonalRecords, readMatchPersonalState, watchStateIsProtected, writeMatchPersonalState, type MatchPersonalState, type WatchState } from "../domain/matchPersonalState";
 import { followPlayer, followTournament, isPlayerFollowed, isTournamentFollowed, listFollowedPlayers, listFollowedTournaments, unfollowPlayer, unfollowTournament, type FollowedPlayer, type FollowedTournament } from "../domain/followedState";
 import { persistFollowedPlayer, persistFollowedTournament, persistMatchState } from "../data/personalData";
@@ -71,24 +73,6 @@ function timeLabel(match: CourtMatch) {
     : new Intl.DateTimeFormat("en-CA", { hour: "numeric", minute: "2-digit" }).format(date);
 }
 
-function scoreLabel(match: CourtMatch) {
-  const raw = match.sets as unknown as unknown[];
-  if (!raw?.length) return "";
-  if (raw.length === 2 && raw.every(value => typeof value === "number")) {
-    return `${raw[0]}–${raw[1]}`;
-  }
-  return raw.map(set => {
-    if (Array.isArray(set) && set.length >= 2) return `${set[0]}–${set[1]}`;
-    if (set && typeof set === "object") {
-      const typed = set as { home?: number; away?: number };
-      if (typeof typed.home === "number" && typeof typed.away === "number") {
-        return `${typed.home}–${typed.away}`;
-      }
-    }
-    return "";
-  }).filter(Boolean).join("  ");
-}
-
 function playerLine(player: CourtMatch["home"]) {
   return `<span class="player-name">${escapeHtml(player.name)}</span>${player.ranking ? `<span class="rank">${player.ranking}</span>` : ""}`;
 }
@@ -122,7 +106,7 @@ function significantRound(round?: string) {
 function matchRow(match: CourtMatch) {
   const state = readMatchPersonalState(match.id);
   const protectedScore = watchStateIsProtected(state) && !revealedMatchIds.has(match.id) && (match.status === "live" || match.status === "completed");
-  const score = protectedScore ? "" : scoreLabel(match);
+  const score = protectedScore ? "" : setScoreLabel(match);
   const round = matchHeading(match.round, match.roundCode);
   return `<a class="match" href="#/match/${encodeURIComponent(match.id)}">
     <div class="match-time ${match.status === "live" ? "is-live" : ""}">${escapeHtml(timeLabel(match))}</div>
@@ -276,7 +260,7 @@ function playerAsFollowed(player: CourtPlayer): FollowedPlayer {
 }
 
 function playerMeta(player: Pick<CourtPlayer, "tour" | "countryCode" | "ranking">) {
-  return [player.tour, player.countryCode, player.ranking ? `No. ${player.ranking}` : ""].filter(Boolean).join(" · ");
+  return [player.tour, countryDisplayName(player.countryCode), player.ranking ? `No. ${player.ranking}` : ""].filter(Boolean).join(" · ");
 }
 
 function followedPlayerRow(player: FollowedPlayer) {
@@ -373,8 +357,8 @@ function playerDetailView(player:CourtPlayer) {
   const facts=[
     player.ranking ? `<div><strong>${player.ranking}</strong><span>Ranking</span></div>` : "",
     age !== undefined ? `<div><strong>${age}</strong><span>Age</span></div>` : "",
-    player.hand ? `<div><strong>${player.hand === "R" ? "Right" : player.hand === "L" ? "Left" : escapeHtml(player.hand)}</strong><span>Hand</span></div>` : "",
-    player.countryCode ? `<div><strong>${escapeHtml(player.countryCode)}</strong><span>Country</span></div>` : ""
+    player.hand ? `<div><strong>${escapeHtml(handDisplayName(player.hand))}</strong><span>Plays</span></div>` : "",
+    player.countryCode ? `<div><strong>${escapeHtml(countryDisplayName(player.countryCode))}</strong><span>Country</span></div>` : ""
   ].filter(Boolean).join("");
   return `<a class="back-link" href="#/players">← Players</a>
     <header class="player-profile-hero">
@@ -383,7 +367,7 @@ function playerDetailView(player:CourtPlayer) {
     </header>
     <main class="player-profile-main">
       <div class="player-facts">${facts || `<span class="editorial-empty">Profile details are limited for this player.</span>`}</div>
-      <section class="player-profile-section"><div class="section-heading"><h2>Current context</h2><span>Free data</span></div>${player.nextMatch ? `<a class="player-next-match" href="#/match/${encodeURIComponent(player.nextMatch.id)}"><span>Next match</span><strong>${escapeHtml(player.nextMatch.home.name)} <i>vs</i> ${escapeHtml(player.nextMatch.away.name)}</strong><span>${escapeHtml(player.nextMatch.tournamentName)} · ${escapeHtml(matchHeading(player.nextMatch.round, player.nextMatch.roundCode))} · ${escapeHtml(timeLabel(player.nextMatch))}</span></a>` : `<p class="editorial-empty">No upcoming match is currently listed.</p>`}<p class="editorial-empty player-data-note">Recent completed-match form and deep historical records remain unavailable on the free data plan.</p></section>
+      <section class="player-profile-section"><div class="section-heading"><h2>Current context</h2></div>${player.nextMatch ? `<a class="player-next-match" href="#/match/${encodeURIComponent(player.nextMatch.id)}"><span>Next match</span><strong>${escapeHtml(player.nextMatch.home.name)} <i>vs</i> ${escapeHtml(player.nextMatch.away.name)}</strong><span>${escapeHtml(player.nextMatch.tournamentName)} · ${escapeHtml(matchHeading(player.nextMatch.round, player.nextMatch.roundCode))} · ${escapeHtml(timeLabel(player.nextMatch))}</span></a>` : `<p class="editorial-empty">Next match not yet available.</p>`}<p class="editorial-empty player-data-note">Recent completed-match form and deep historical records remain unavailable on the free data plan.</p></section>
     </main>`;
 }
 
@@ -419,8 +403,13 @@ function shell(routeName: string, content: string) {
 
 function matchView(match: CourtMatch) {
   const state = readMatchPersonalState(match.id);
-  const protectedScore = watchStateIsProtected(state) && !revealedMatchIds.has(match.id) && (match.status === "live" || match.status === "completed");
-  const score = protectedScore ? "" : scoreLabel(match);
+  const completed = matchIsCompleted(match);
+  const protectedScore = watchStateIsProtected(state) && !revealedMatchIds.has(match.id) && (match.status === "live" || completed);
+  const presentation = completedMatchPresentation(match);
+  const score = protectedScore ? "" : presentation.scoreLabel;
+  const winnerPlayerId = protectedScore ? undefined : presentation.winnerPlayerId;
+  const player = (entry: CourtMatch["home"]) => `<div class="match-player${winnerPlayerId === entry.id ? " is-winner" : ""}>${playerLine(entry)}${winnerPlayerId === entry.id ? `<span class="winner-label">Winner</span>` : ""}</div>`;
+  const contextStatus = completed ? "FINAL" : escapeHtml(timeLabel(match));
   return `<a class="back-link" href="#/">← Today</a>
     <header class="match-masthead">
       <div class="eyebrow">${escapeHtml(match.tour)} · ${escapeHtml(match.tournamentName)}</div>
@@ -430,13 +419,13 @@ function matchView(match: CourtMatch) {
       </div>
     </header>
     <main>
-      <div class="match-context"><span>${match.eventType === "doubles" ? "DOUBLES" : "SINGLES"}</span><span>${escapeHtml(timeLabel(match))}</span></div>
+      <div class="match-context"><span>${match.eventType === "doubles" ? "DOUBLES" : "SINGLES"}</span><span class="${completed ? "is-final" : ""}">${contextStatus}</span></div>
       <div class="match-players">
-        <div class="match-player">${playerLine(match.home)}</div>
+        ${player(match.home)}
         <div class="match-versus">vs</div>
-        <div class="match-player">${playerLine(match.away)}</div>
+        ${player(match.away)}
       </div>
-      ${protectedScore ? `<div class="protected-result"><span>${match.status === "completed" ? "Result hidden" : "Score hidden"}</span><button data-action="reveal">Reveal</button></div>` : score ? `<div class="match-score">${escapeHtml(score)}</div>` : ""}
+      ${protectedScore ? `<div class="protected-result"><span>${completed ? "Result hidden" : "Score hidden"}</span><button data-action="reveal">Reveal</button></div>` : score ? `<div class="match-score${completed ? " is-final" : ""}">${escapeHtml(score)}</div>` : ""}
       <div class="personal-actions">
         <button data-action="star" class="${state.starred ? "active" : ""}" aria-pressed="${state.starred}"><span class="action-icon">${state.starred ? "★" : "☆"}</span><span>${state.starred ? "Starred" : "Star"}</span></button>
         <button data-action="watch" class="${state.watchState === "up_next" ? "active" : ""}" aria-pressed="${state.watchState === "up_next"}"><span class="action-icon">${state.watchState === "up_next" ? "●" : "○"}</span><span>${state.watchState === "up_next" ? "Watching" : state.watchState === "later" ? "Watch later" : state.watchState === "watched" ? "Watched" : "Watch"}</span></button>
@@ -554,7 +543,7 @@ function wirePlayers(root:HTMLElement) {
         playerSearchRequest=new AbortController();
         searchPlayers(playerSearchQuery,playerSearchRequest.signal).then(results=>{
           if(parseRoute(location.hash).name!=="players") return;
-          playerSearchResults=results;
+          playerSearchResults=dedupePlayers(results);
           renderRoot(root,shell("players",playersView()));
           wirePlayers(root);
           requestAnimationFrame(()=>root.querySelector<HTMLInputElement>("#player-search")?.focus());
