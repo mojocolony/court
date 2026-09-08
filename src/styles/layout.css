@@ -26,7 +26,7 @@
   display: flex;
   align-items: center;
   gap: 34px;
-  font-size: 16px;
+  font-size: 17px;
 }
 
 .top-nav a {
@@ -148,7 +148,7 @@
   background: transparent;
   padding: 5px 0;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 16px;
   cursor: pointer;
 }
 .segmented button.active {
@@ -169,7 +169,7 @@
   padding-bottom: 5px;
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: .02em;
   text-transform: uppercase;
 }
@@ -188,7 +188,7 @@
 .eyebrow,
 .round-label {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.2;
   letter-spacing: .13em;
   font-weight: 600;
@@ -227,7 +227,7 @@ h2 {
   border-top: 1px solid var(--rule);
   color: var(--faint);
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -252,7 +252,7 @@ h2 {
 .match-round {
   grid-area: round;
   color: var(--muted);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.35;
 }
 .players {
@@ -277,7 +277,7 @@ h2 {
   flex: 0 0 auto;
   color: var(--muted);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0;
 }
 .match-status {
@@ -475,6 +475,139 @@ h2 {
   font-size: 10px;
 }
 
+
+/* Editorial secondary pages */
+.secondary-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 36px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--ink);
+}
+.secondary-hero h1 {
+  margin: 5px 0 0;
+  font-family: var(--serif);
+  font-size: clamp(54px, 4.4vw, 76px);
+  line-height: .96;
+  font-weight: 500;
+  letter-spacing: -.035em;
+}
+.secondary-detail {
+  padding-bottom: 4px;
+  color: var(--muted);
+  font-size: 16px;
+}
+.tour-timeline { padding: 22px 0 0; }
+.tour-month {
+  display: grid;
+  grid-template-columns: 110px 220px 1fr;
+  gap: 28px;
+  align-items: start;
+  min-height: 78px;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.tour-month-marker {
+  padding-top: 7px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.tour-month.current .tour-month-marker { color: var(--ink); }
+.tour-month h2 {
+  margin: 0;
+  font-size: 31px;
+}
+.tour-month.current h2 { font-weight: 600; }
+.tour-month-content { min-width: 0; }
+.timeline-rule {
+  display: block;
+  height: 1px;
+  margin-top: 19px;
+  background: var(--rule);
+}
+.timeline-note,
+.editorial-empty {
+  max-width: 720px;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.tour-event {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 2px 0 12px;
+}
+.tour-event-name {
+  display: block;
+  font-family: var(--serif);
+  font-size: 24px;
+  line-height: 1.1;
+}
+.tour-event-meta {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 14px;
+  text-transform: capitalize;
+}
+.players-page,
+.watch-sections { padding-top: 8px; }
+.following-section,
+.players-search,
+.watch-section {
+  padding: 34px 0 38px;
+  border-bottom: 1px solid var(--rule);
+}
+.watch-section.is-primary { border-bottom-color: var(--rule-strong); }
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 12px;
+}
+.section-heading h2 {
+  margin: 0;
+  font-size: 34px;
+}
+.section-heading > span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.players-search { max-width: 980px; }
+.search-label {
+  display: block;
+  margin: 24px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.player-search-field {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--rule-strong);
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  padding: 10px 0 13px;
+  font-family: var(--serif);
+  font-size: 31px;
+}
+.player-search-field::placeholder { color: var(--faint); }
+.player-search-field:focus { border-bottom-color: var(--ink); }
+
 .bottom-nav { display: none; }
 
 @media (max-width: 760px) {
@@ -568,6 +701,20 @@ h2 {
 
   .match-player { font-size: 27px; }
   .personal-actions { gap: 18px; }
+
+  .secondary-hero { align-items: flex-start; flex-direction: column; gap: 10px; padding-bottom: 20px; }
+  .secondary-hero h1 { font-size: clamp(44px, 13vw, 58px); }
+  .secondary-detail { font-size: 13px; }
+  .tour-month { grid-template-columns: 62px 1fr; gap: 14px; }
+  .tour-month-marker { grid-column: 1; grid-row: 1; font-size: 9px; }
+  .tour-month h2 { grid-column: 2; grid-row: 1; font-size: 25px; }
+  .tour-month-content { grid-column: 2; grid-row: 2; }
+  .timeline-rule { margin-top: 0; }
+  .tour-event { align-items: flex-start; }
+  .tour-event-name { font-size: 21px; }
+  .section-heading h2 { font-size: 28px; }
+  .editorial-empty, .timeline-note { font-size: 15px; }
+  .player-search-field { font-size: 25px; }
 }
 
 @media (min-width: 761px) and (max-width: 980px) {

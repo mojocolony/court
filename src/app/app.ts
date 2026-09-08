@@ -193,6 +193,66 @@ function placeholder(title: string, copy: string) {
   return `<header class="masthead"><h1>${title}</h1></header><main><p class="intro">${copy}</p></main>`;
 }
 
+function secondaryHero(title: string, kicker: string, detail: string) {
+  return `<header class="secondary-hero">
+    <div>
+      <div class="eyebrow">${escapeHtml(kicker)}</div>
+      <h1>${escapeHtml(title)}</h1>
+    </div>
+    <div class="secondary-detail">${escapeHtml(detail)}</div>
+  </header>`;
+}
+
+function tourView() {
+  const now = new Date();
+  const monthNames = Array.from({ length: 12 }, (_, month) =>
+    new Intl.DateTimeFormat("en-CA", { month: "long" }).format(new Date(now.getFullYear(), month, 1))
+  );
+  const current = now.getMonth();
+  const currentMatches = lastFeed ? [...lastFeed.live, ...lastFeed.upcoming] : [];
+  const events = new Map<string, CourtMatch>();
+  for (const match of currentMatches) {
+    if (!events.has(match.tournamentId || match.tournamentName)) events.set(match.tournamentId || match.tournamentName, match);
+  }
+  const currentEvents = [...events.values()].map(match => `<a class="tour-event" href="#/tournament/${encodeURIComponent(match.tournamentId || match.id)}">
+      <div><span class="tour-event-name">${escapeHtml(match.tournamentName)}</span><span class="tour-event-meta">${escapeHtml(match.tour)} · ${escapeHtml(match.eventType)}</span></div>
+      <span class="surface ${match.surface}">${escapeHtml(match.surface.toUpperCase())}</span>
+    </a>`).join("");
+
+  return `${secondaryHero("Tour", `${now.getFullYear()} season`, "Season almanac")}
+    <main class="tour-timeline">${monthNames.map((month, index) => `<section class="tour-month ${index === current ? "current" : ""}">
+      <div class="tour-month-marker">${index === current ? `<span>Current</span>` : ""}</div>
+      <h2>${escapeHtml(month)}</h2>
+      <div class="tour-month-content">${index === current
+        ? currentEvents || `<p class="timeline-note">Current tournaments will appear here as schedule data becomes available.</p>`
+        : `<span class="timeline-rule"></span>`}</div>
+    </section>`).join("")}</main>`;
+}
+
+function playersView() {
+  return `${secondaryHero("Players", "Reference", "Following first")}
+    <main class="players-page">
+      <section class="following-section">
+        <div class="section-heading"><h2>Following</h2><span>0 players</span></div>
+        <p class="editorial-empty">Players you follow will stay here for quick access to ranking, form, current tournament and next-match context.</p>
+      </section>
+      <section class="players-search">
+        <div class="section-heading"><h2>Find a player</h2><span>ATP · WTA</span></div>
+        <label class="search-label" for="player-search">Search players</label>
+        <input id="player-search" class="player-search-field" type="search" placeholder="Name" autocomplete="off">
+      </section>
+    </main>`;
+}
+
+function watchView() {
+  return `${secondaryHero("Watch", "Personal", "Spoiler-safe viewing")}
+    <main class="watch-sections">
+      <section class="watch-section is-primary"><div class="section-heading"><h2>Up Next</h2><span>0</span></div><p class="editorial-empty">Matches you choose to watch will appear here in start-time order, with broadcast information when available.</p></section>
+      <section class="watch-section"><div class="section-heading"><h2>Watch Later</h2><span>0</span></div><p class="editorial-empty">Keep matches here when you want to preserve them without committing to watching live.</p></section>
+      <section class="watch-section"><div class="section-heading"><h2>Watched</h2><span>0</span></div><p class="editorial-empty">Completed viewing history and your match notes will accumulate here.</p></section>
+    </main>`;
+}
+
 function shell(routeName: string, content: string) {
   return `<div class="shell">
     <header class="app-header">
@@ -358,14 +418,14 @@ export function renderApp(root: HTMLElement) {
   }
 
   const content = route.name === "tour"
-    ? placeholder("Tour", "The season timeline will live here.")
+    ? tourView()
     : route.name === "players"
-      ? placeholder("Players", "Followed players and player search will live here.")
+      ? playersView()
       : route.name === "watch"
-        ? placeholder("Watch", "Your spoiler-safe viewing queue will live here.")
+        ? watchView()
         : route.name === "player"
-          ? placeholder("Player", "Current form, records and next-match context will live here.")
-          : placeholder("Tournament", "Matches, players and tournament information will live here.");
+          ? `${secondaryHero("Player", "Reference", "Player profile")}<main><p class="intro">Current form, records and next-match context will live here.</p></main>`
+          : `${secondaryHero("Tournament", "Tour", "Tournament detail")}<main><p class="intro">Matches, draw, players and tournament information will live here.</p></main>`;
 
   renderRoot(root, shell(route.name, content));
 }
