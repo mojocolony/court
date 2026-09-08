@@ -1,0 +1,15 @@
+:root {
+  font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  color: #242523;
+  background: #f2f0ea;
+  font-synthesis: none;
+  --paper: #f2f0ea;
+  --ink: #242523;
+  --muted: #74756f;
+  --rule: rgba(36,37,35,.17);
+  --hard: #788994;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); }
+button, input { font: inherit; }
+a { color: inherit; text-decoration: none; }
