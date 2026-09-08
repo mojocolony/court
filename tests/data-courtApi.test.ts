@@ -18,3 +18,18 @@ describe("CourtMatch free-feed contract", () => {
     expect(match.sets).toEqual([]);
   });
 });
+
+describe("Today fixture contract", () => {
+  it("accepts scheduled ATP/WTA matches without live score arrays", () => {
+    const match = sample({
+      tournamentName: "US Open",
+      tour: "ATP",
+      scheduledAt: "2026-09-08T23:00:00Z",
+      status: "scheduled",
+      sets: []
+    });
+    expect(match.tournamentName).toBe("US Open");
+    expect(match.status).toBe("scheduled");
+    expect(match.sets).toEqual([]);
+  });
+});

@@ -49,7 +49,7 @@ function todayContent(feed: TodayFeed): string {
   const visibleUpcoming = feed.upcoming.filter(m => m.eventType === "singles" && isMainTourMatch(m));
   const matches = [...visibleLive, ...visibleUpcoming];
   return `<div class="feed-status">${visibleLive.length ? `${visibleLive.length} live` : "No live matches"} · updated ${new Intl.DateTimeFormat("en-CA", {hour:"numeric", minute:"2-digit"}).format(new Date(feed.fetchedAt))}</div>
-    ${matches.length ? tournamentSections(matches) : `<p class="empty-note">No ATP or WTA tour matches in the free feed right now.</p>`}`;
+    ${matches.length ? tournamentSections(matches) : `<p class="empty-note">No ATP or WTA matches scheduled today.</p>`}`;
 }
 function todayView(body = `<div class="loading">Loading today’s matches…</div>`): string {
   return `<header class="masthead"><div><div class="eyebrow">${dayHeading()}</div><h1>Today</h1></div><button class="quiet-button" aria-label="Text size">Aa</button></header><main>${body}</main>`;

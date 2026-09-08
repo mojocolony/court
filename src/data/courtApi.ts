@@ -23,9 +23,16 @@ function config() {
   return { url, key };
 }
 
+function localDateParam(date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+  const value = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+}
+
 export async function getTodayFeed(signal?: AbortSignal): Promise<TodayFeed> {
   const { url, key } = config();
-  const response = await fetch(`${url}/functions/v1/court-tennis?route=today`, {
+  const date = localDateParam();
+  const response = await fetch(`${url}/functions/v1/court-tennis?route=today&date=${encodeURIComponent(date)}`, {
     headers: {
       apikey: key,
       Authorization: `Bearer ${key}`,
