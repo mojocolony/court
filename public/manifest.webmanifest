@@ -1,0 +1,10 @@
+{
+  "name": "Baseline",
+  "short_name": "Baseline",
+  "description": "A quiet personal dashboard for following professional tennis.",
+  "start_url": "/court/",
+  "scope": "/court/",
+  "display": "standalone",
+  "background_color": "#f4f1e9",
+  "theme_color": "#f4f1e9"
+}

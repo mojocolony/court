@@ -20,7 +20,7 @@ export interface TodayFeed {
 function config() {
   const url = import.meta.env.VITE_SUPABASE_URL?.replace(/\/$/, "");
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !key) throw new Error("Court data connection is not configured.");
+  if (!url || !key) throw new Error("Baseline data connection is not configured.");
   return { url, key };
 }
 
@@ -35,16 +35,17 @@ export function utcRangeForOffsetDate(
 }
 
 export function localDayUtcRange(date = new Date()): { from: string; to: string } {
-  const midnight = new Date(date);
-  midnight.setHours(0, 0, 0, 0);
-  return utcRangeForOffsetDate(
-    midnight.getFullYear(), midnight.getMonth(), midnight.getDate(), midnight.getTimezoneOffset()
-  );
+  const from = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+  const next = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1, 0, 0, 0, 0);
+  return {
+    from: from.toISOString(),
+    to: new Date(next.getTime() - 1).toISOString()
+  };
 }
 
-export async function getTodayFeed(signal?: AbortSignal, draw: "singles" | "doubles" = "singles"): Promise<TodayFeed> {
+export async function getTodayFeed(signal?: AbortSignal, draw: "singles" | "doubles" = "singles", date = new Date()): Promise<TodayFeed> {
   const { url, key } = config();
-  const { from, to } = localDayUtcRange();
+  const { from, to } = localDayUtcRange(date);
   const params = new URLSearchParams({ route: "today", from, to, draw });
   const response = await fetch(`${url}/functions/v1/court-tennis?${params.toString()}`, {
     headers: {
