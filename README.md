@@ -4,7 +4,7 @@ A quiet personal dashboard for following professional tennis.
 
 ## Status
 
-v0.6.1 is the first functional build on top of the Baseline editorial design. Today keeps the ATP/WTA and Singles/Doubles order-of-play view, now with personal relevance ordering and spoiler-safe score hiding for matches placed in Watch.
+v0.6.2 is the first functional build on top of the Baseline editorial design. Today keeps the ATP/WTA and Singles/Doubles order-of-play view, now with personal relevance ordering and spoiler-safe score hiding for matches placed in Watch.
 
 Players now supports live ATP/WTA player search, followed players, player profiles, and upcoming-match context where the free provider has it. Tour entries open tournament detail pages and tournaments can be followed. Watch now contains working Up Next, Watch Later, and Watched sections with match snapshots and notes.
 
